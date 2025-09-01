@@ -11,9 +11,11 @@ import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
+import Whiteboard from './whiteboard';
+import Recorder from './summary';
 // import server from '../environment';
 
-// const server_url = "http://localhost:8080";
+const server_url = "http://localhost:8080";
 
 var connections = {};
 
@@ -45,6 +47,8 @@ export default function VideoMeetComponent() {
     let [videos, setVideos] = useState([])
 
     const [stream, setStream] = useState(null);
+    const [selectedLang, setSelectedLang] = useState('en'); // default English
+    const [isTranslating, setIsTranslating] = useState(false);
 
     // TODO
     // if(isChrome() === false) {
@@ -417,30 +421,104 @@ export default function VideoMeetComponent() {
         setMessage(e.target.value);
     }
 
-    const addMessage = (data, sender, socketIdSender) => {
+    const addMessage = async (data, sender, socketIdSender) => {
+        console.log('addMessage called:', { data, sender, socketIdSender, selectedLang });
+        
+        let translatedText = data;
+
+        // Only translate if user selected a different language and it's not their own message
+        if (selectedLang !== 'en' && socketIdSender !== socketIdRef.current) {
+            console.log('Translating message:', data, 'to:', selectedLang);
+            setIsTranslating(true);
+            translatedText = await translateText(data, selectedLang);
+            setIsTranslating(false);
+            console.log('Translation result:', translatedText);
+        }
+
+        const newMessage = { sender, original: data, translated: translatedText };
+        console.log('Adding message:', newMessage);
+        
         setMessages((prevMessages) => [
             ...prevMessages,
-            { sender: sender, data: data }
+            newMessage
         ]);
+
         if (socketIdSender !== socketIdRef.current) {
             setNewMessages((prevNewMessages) => prevNewMessages + 1);
         }
     };
 
+    const handleLanguageChange = async (newLang) => {
+        console.log('Language changed to:', newLang);
+        setSelectedLang(newLang);
+        
+        // If changing to a non-English language, translate existing messages
+        if (newLang !== 'en' && messages.length > 0) {
+            console.log('Translating existing messages to:', newLang);
+            setIsTranslating(true);
+            
+            const updatedMessages = await Promise.all(
+                messages.map(async (msg) => {
+                    if (msg.original) {
+                        console.log('Translating message:', msg.original);
+                        const translated = await translateText(msg.original, newLang);
+                        console.log('Translation result:', translated);
+                        return { ...msg, translated };
+                    }
+                    return msg;
+                })
+            );
+            
+            console.log('Updated messages:', updatedMessages);
+            setMessages(updatedMessages);
+            setIsTranslating(false);
+        }
+    };
 
-    let sendMessage = () => {
-        console.log(socketRef.current);
-        socketRef.current.emit('chat-message', message, username)
+
+    const sendMessage = () => {
+        if (!message.trim()) return;
+        
+        // Add message to local state immediately
+        const newMessage = { 
+            sender: username, 
+            original: message, 
+            translated: message, // No translation needed for own messages
+            isOwn: true 
+        };
+        setMessages(prevMessages => [...prevMessages, newMessage]);
+        
+        // Send to server
+        socketRef.current.emit('chat-message', message, username);
         setMessage("");
-
-        // this.setState({ message: "", sender: username })
-    }
+    };
 
 
     let connect = () => {
         setAskForUsername(false);
         getMedia();
     }
+
+    const translateText = async (text, toLang) => {
+        try {
+            console.log('Translating:', text, 'to:', toLang);
+            const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${toLang}`);
+            const data = await response.json();
+            console.log('Translation API response:', data);
+            
+            // Check if translation was successful
+            if (data.responseStatus === 200 && data.responseData) {
+                console.log('Translation successful:', data.responseData.translatedText);
+                return data.responseData.translatedText;
+            } else {
+                console.warn('Translation failed:', data.responseDetails);
+                return text; // fallback to original text
+            }
+        } catch (error) {
+            console.error('Translation error:', error);
+            return text; // fallback to original text
+        }
+    };
 
     return (
         <div>
@@ -463,13 +541,80 @@ export default function VideoMeetComponent() {
                         <div className={styles.chatRoom}>
                             <div className={styles.chatContainer}>
                                 <h1>Chat</h1>
+                                <div style={{ marginBottom: '20px', padding: '0 10px' }}>
+                                    <TextField
+                                        select
+                                        label="Language"
+                                        value={selectedLang}
+                                        onChange={(e) => handleLanguageChange(e.target.value)}
+                                        SelectProps={{ native: true }}
+                                        variant="outlined"
+                                        size="small"
+                                        style={{ width: '100%' }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '8px',
+                                                backgroundColor: '#f8f9fa',
+                                                '&:hover': {
+                                                    backgroundColor: '#f1f3f4'
+                                                }
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                fontSize: '0.875rem',
+                                                color: '#5f6368'
+                                            }
+                                        }}
+                                    >
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="ja">Japanese</option>
+                                    <option value="ko">Korean</option>
+                                    <option value="zh">Chinese</option>
+                                    </TextField>
+                                </div>
 
                                 <div className={styles.chattingDisplay}>
-
+                                    {messages.map((msg, index) => (
+                                        <div key={index} className={`${styles.messageItem} ${msg.isOwn ? styles.ownMessage : ''}`}>
+                                            <div className={styles.messageAvatar}>
+                                                {msg.sender ? msg.sender.charAt(0).toUpperCase() : 'U'}
+                                            </div>
+                                            <div className={styles.messageContent}>
+                                                <div className={styles.messageHeader}>
+                                                    <span className={styles.senderName}>{msg.sender}</span>
+                                                    <span className={styles.timestamp}>
+                                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <div className={styles.messageBubble}>
+                                                    {msg.translated || msg.original || msg.data}
+                                                </div>
+                                                {msg.original && msg.translated && msg.original !== msg.translated && !msg.isOwn && (
+                                                    <div className={styles.originalText}>
+                                                        Original: {msg.original}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isTranslating && (
+                                        <div className={styles.translatingIndicator}>
+                                            Translating...
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className={styles.chattingArea}>
-                                    <TextField value={message} onChange={(e) => setMessage(e.target.value)} id="outlined-basic" label="Enter Your chat" variant="outlined" />
+                                    <TextField 
+                                        value={message} 
+                                        onChange={(e) => setMessage(e.target.value)} 
+                                        onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }}
+                                        id="outlined-basic" 
+                                        label="Enter Your chat" 
+                                        variant="outlined" 
+                                    />
                                     <Button variant='contained' onClick={sendMessage}>Send</Button>
                                 </div>
                             </div>
@@ -486,6 +631,14 @@ export default function VideoMeetComponent() {
                         <IconButton onClick={handleEndCall} style={{ color: "red" }}>
                             <CallEndIcon  />
                         </IconButton>
+
+<div className={styles.whiteboard}>
+  {/* Your third-party component */}
+<Whiteboard/>
+
+</div>
+
+<Recorder/>
 
                         <IconButton onClick={handleAudio} style={{ color: "white" }}>
                             {audio === true ? <MicIcon /> : <MicOffIcon />}

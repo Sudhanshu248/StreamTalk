@@ -63,6 +63,8 @@ export default function History(){
                                         Date: {formatDate(e.date)}
                                     </Typography>
 
+                                    <button>Generate Summary</button>
+
                                 </CardContent>
                             </Card>
                         </>

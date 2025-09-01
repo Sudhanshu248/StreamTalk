@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button, IconButton, TextField } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { AuthContext } from '../contexts/AuthContext';
+import History from './history';
 
 function Home() {
 
@@ -68,6 +69,8 @@ function Home() {
                     <img srcSet='/images/homePage-Image.png' alt="" />
                 </div>
             </div>
+
+            <History/>
         </>
     )
 

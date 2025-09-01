@@ -33,11 +33,19 @@ export const connectToSocket  = (server) => {
             }
 
             if(messages[path] != undefined){
-                for(let a = 0; a < messages[path].lenght; ++a){
+                for(let a = 0; a < messages[path].length; ++a){
                     io.to(socket.id).emit("chat-message", messages[path][a]['data'], messages[path][a]['sender'], messages[path][a]['socket-id-sender'])
                 }
             }
         })
+
+        socket.on('whiteboard-draw', (data) => {
+            socket.broadcast.emit('whiteboard-draw', data);
+        });
+
+        socket.on('whiteboard-clear', () => {
+            socket.broadcast.emit('whiteboard-clear');
+        });
 
         socket.on("signal", (toId, message) => {
             io.to(toId).emit("signal", socket.io, message);
