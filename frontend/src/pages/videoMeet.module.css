@@ -2,15 +2,68 @@
     position: relative;
     height: 100vh;
     background: rgb(1, 4, 48);
+    overflow: hidden;
+}
+
+/* Mobile responsiveness for devices below 500px */
+@media (max-width: 500px) {
+    .meetVideoContainer {
+        height: 100vh;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Ensure proper touch targets */
+    .buttonContainers .MuiIconButton-root {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* Prevent horizontal scrolling */
+    * {
+        max-width: 100%;
+    }
 }
 
 .whiteboard {
     background-color: white;
     width: 35%;
-    margin: auto;
+    position: absolute;
+    bottom: 10vh;
+    left: 33vw;
+    /* margin: auto; */
     border-radius: 20px;
     padding: 10px 15px 20px;
+}
 
+@media (min-width: 500px) and (max-width: 870px) {
+    .whiteboard {
+        width: 58%;
+        left: 20vw;
+        border-radius: 15px;
+        padding: 9px 14px 18px;
+    }
+}
+
+@media (min-width: 870px) and (max-width: 1150px) {
+    .whiteboard {
+        width: 40%;
+        left: 30vw;
+        border-radius: 15px;
+        padding: 9px 14px 18px;
+    }
+}
+
+
+@media (max-width: 500px) {
+    .whiteboard {
+        width: 95%;
+        position: absolute;
+        left: 2.5vw;
+        margin: auto;
+        border-radius: 10px;
+        padding: 8px 12px 15px;
+    }
 }
 
 .meetUserVideo {
@@ -22,15 +75,46 @@
     border-radius: 20px;
 }
 
+@media (max-width: 500px) {
+    .meetUserVideo {
+        bottom: 15vh;
+        height: 15vh;
+        left: 10px;
+        border-radius: 10px;
+        max-width: 120px;
+    }
+}
+
 .buttonContainers {
     position: absolute;
-    width: 65vw;
+    width: 100vw;
     bottom: 0;
     text-align: center;
 }
 
 .buttonContainers svg {
     font-size: 3rem;
+}
+
+@media (max-width: 500px) {
+    .buttonContainers {
+        width: 100%;
+        padding: 10px 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .buttonContainers svg {
+        font-size: 1.8rem;
+    }
+    
+    .buttonContainers .MuiIconButton-root {
+        padding: 8px;
+        margin: 0 2px;
+    }
 }
 
 .conferenceView { 
@@ -46,16 +130,72 @@
     border-radius: 10px;
 }
 
+@media (max-width: 500px) {
+    .conferenceView {
+        flex-direction: column;
+        padding: 5px;
+        gap: 5px;
+        align-items: center;
+    }
+    
+    .conferenceView video {
+        width: 90vw;
+        height: 25vh;
+        min-width: unset;
+        border-radius: 8px;
+    }
+}
+
 .chatRoom {
+    /* margin-top: 10vh; */
     position: absolute;
-    height: 90vh;
+    top: 10vh;
+    height: 80vh;
     right: 0;
     background: white;
     border-radius: 10px;
-    width: 30vw;
+    width: 25vw;
     padding-inline: 20px;
     box-shadow: -2px 0 10px rgba(0,0,0,0.1);
     border: 1px solid #e8eaed;
+}
+
+/* Tablet responsiveness (501px - 768px)
+@media (min-width: 501px) and (max-width: 768px) {
+    .chatRoom {
+        width: 40vw;
+        padding-inline: 15px;
+    }
+} */
+
+/* Small desktop responsiveness (769px - 1024px) */
+@media (min-width: 750px) and (max-width: 1024px) {
+    .chatRoom {
+        width: 35vw;
+        padding-inline: 18px;
+    }
+}
+
+/* Large desktop responsiveness (1025px+) */
+@media (min-width: 1025px) {
+    .chatRoom {
+        width: 30vw;
+        padding-inline: 25px;
+    }
+}
+
+@media (max-width: 750px) {
+    .chatRoom {
+        width: 90vw;
+        margin-inline: 5vw;
+        height: 80vh;
+        right: 0;
+        /* margin-top: 10vh; */
+        /* top: 0; */
+        border-radius: 15px;
+        padding-inline: 15px;
+        z-index: 1000;
+    }
 }
 
 .chatContainer {
@@ -71,9 +211,48 @@
     margin-bottom: 20px;
     padding-top: 20px;
     font-size: 1.25rem;
-    font-weight: 500;
+    font-weight: 600;
     border-bottom: 1px solid #e8eaed;
     padding-bottom: 15px;
+}
+
+/* Tablet responsiveness for chat header */
+@media (min-width: 501px) and (max-width: 768px) {
+    .chatContainer h1 {
+        font-size: 1.2rem;
+        margin-bottom: 18px;
+        padding-top: 18px;
+        padding-bottom: 12px;
+    }
+}
+
+/* Small desktop responsiveness for chat header */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .chatContainer h1 {
+        font-size: 1.3rem;
+        margin-bottom: 22px;
+        padding-top: 22px;
+        padding-bottom: 16px;
+    }
+}
+
+/* Large desktop responsiveness for chat header */
+@media (min-width: 1025px) {
+    .chatContainer h1 {
+        font-size: 1.4rem;
+        margin-bottom: 25px;
+        padding-top: 25px;
+        padding-bottom: 18px;
+    }
+}
+
+@media (max-width: 500px) {
+    .chatContainer h1 {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        padding-top: 15px;
+        padding-bottom: 10px;
+    }
 }
 
 .chattingDisplay {
@@ -85,6 +264,41 @@
     flex-direction: column;
     gap: 16px;
     position: relative;
+}
+
+/* Tablet responsiveness for chat display */
+@media (min-width: 501px) and (max-width: 768px) {
+    .chattingDisplay {
+        padding: 12px 0;
+        margin-bottom: 90px;
+        gap: 14px;
+    }
+}
+
+/* Small desktop responsiveness for chat display */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .chattingDisplay {
+        padding: 22px 0;
+        margin-bottom: 110px;
+        gap: 18px;
+    }
+}
+
+/* Large desktop responsiveness for chat display */
+@media (min-width: 1025px) {
+    .chattingDisplay {
+        padding: 25px 0;
+        margin-bottom: 120px;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 500px) {
+    .chattingDisplay {
+        padding: 10px 0;
+        margin-bottom: 80px;
+        gap: 12px;
+    }
 }
 
 .chattingDisplay::-webkit-scrollbar {
@@ -123,6 +337,16 @@ justify-content: flex-end;
     margin-right: 20%;
 }
 
+@media (max-width: 500px) {
+    .messageItem.ownMessage {
+        margin-right: 2%;
+    }
+    
+    .messageItem:not(.ownMessage) {
+        margin-right: 5%;
+    }
+}
+
 .messageAvatar {
     width: 32px;
     height: 32px;
@@ -137,6 +361,33 @@ justify-content: flex-end;
     flex-shrink: 0;
 }
 
+/* Tablet responsiveness for message avatar */
+@media (min-width: 501px) and (max-width: 768px) {
+    .messageAvatar {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+    }
+}
+
+/* Small desktop responsiveness for message avatar */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .messageAvatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+}
+
+/* Large desktop responsiveness for message avatar */
+@media (min-width: 1025px) {
+    .messageAvatar {
+        width: 44px;
+        height: 44px;
+        font-size: 17px;
+    }
+}
+
 .messageItem.ownMessage .messageAvatar {
     background: #4caf50;
 }
@@ -146,6 +397,33 @@ justify-content: flex-end;
     flex-direction: column;
     max-width: 60%;
     min-width: 0;
+}
+
+/* Tablet responsiveness for message content */
+@media (min-width: 501px) and (max-width: 768px) {
+    .messageContent {
+        max-width: 65%;
+    }
+}
+
+/* Small desktop responsiveness for message content */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .messageContent {
+        max-width: 70%;
+    }
+}
+
+/* Large desktop responsiveness for message content */
+@media (min-width: 1025px) {
+    .messageContent {
+        max-width: 75%;
+    }
+}
+
+@media (max-width: 500px) {
+    .messageContent {
+        max-width: 75%;
+    }
 }
 
 .messageHeader {
@@ -166,13 +444,29 @@ justify-content: flex-end;
     color: #333;
 }
 
-.messageItem.ownMessage .senderName {
-    color: #4caf50;
+/* Tablet responsiveness for sender name */
+@media (min-width: 501px) and (max-width: 768px) {
+    .senderName {
+        font-size: 0.9rem;
+    }
 }
 
-.timestamp {
-    font-size: 0.75rem;
-    color: #666;
+/* Small desktop responsiveness for sender name */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .senderName {
+        font-size: 0.95rem;
+    }
+}
+
+/* Large desktop responsiveness for sender name */
+@media (min-width: 1025px) {
+    .senderName {
+        font-size: 1rem;
+    }
+}
+
+.messageItem.ownMessage .senderName {
+    color: #4caf50;
 }
 
 .messageBubble {
@@ -183,6 +477,33 @@ justify-content: flex-end;
     word-wrap: break-word;
     line-height: 1.4;
     position: relative;
+}
+
+/* Tablet responsiveness for message bubbles */
+@media (min-width: 501px) and (max-width: 768px) {
+    .messageBubble {
+        padding: 14px 18px;
+        border-radius: 20px;
+        line-height: 1.5;
+    }
+}
+
+/* Small desktop responsiveness for message bubbles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .messageBubble {
+        padding: 16px 20px;
+        border-radius: 22px;
+        line-height: 1.5;
+    }
+}
+
+/* Large desktop responsiveness for message bubbles */
+@media (min-width: 1025px) {
+    .messageBubble {
+        padding: 18px 22px;
+        border-radius: 24px;
+        line-height: 1.6;
+    }
 }
 
 .messageItem.ownMessage .messageBubble {
@@ -219,24 +540,117 @@ justify-content: flex-end;
     width: 100%;
     display: flex;
     gap: 10px;
-    padding: 20px 0;
+    padding: 15px 0;
     background: white;
     border-top: 1px solid #e8eaed;
 }
 
+/* Tablet responsiveness for chatting area */
+@media (min-width: 501px) and (max-width: 768px) {
+    .chattingArea {
+        gap: 12px;
+        padding: 18px 0;
+    }
+}
+
+/* Small desktop responsiveness for chatting area */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .chattingArea {
+        gap: 14px;
+        padding: 20px 0;
+    }
+}
+
+/* Large desktop responsiveness for chatting area */
+@media (min-width: 1025px) {
+    .chattingArea {
+        gap: 16px;
+        padding: 22px 0;
+    }
+}
+
+@media (max-width: 500px) {
+    .chattingArea {
+        padding: 10px 0;
+        gap: 8px;
+    }
+    
+    .chattingArea .MuiTextField-root {
+        margin-right: 6px;
+        min-width: 0;
+    }
+}
+
 .chattingArea .MuiTextField-root {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 8px;
+    flex-shrink: 1;
+    flex-grow: 1;
 }
 
 .chattingArea .MuiButton-root {
-    min-width: 80px;
-    height: 56px;
+    min-width: 100px;
+    height: 50px;
     border-radius: 28px;
     background: #007bff;
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 
 .chattingArea .MuiButton-root:hover {
     background: #0056b3;
+}
+
+/* Tablet responsiveness for send button */
+@media (min-width: 501px) and (max-width: 768px) {
+    .chattingArea .MuiButton-root {
+        min-width: 90px;
+        height: 52px;
+        border-radius: 26px;
+        font-size: 0.9rem;
+    }
+    
+    .chattingArea .MuiTextField-root {
+        margin-right: 10px;
+    }
+}
+
+/* Small desktop responsiveness for send button */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .chattingArea .MuiButton-root {
+        min-width: 100px;
+        height: 54px;
+        border-radius: 27px;
+        font-size: 0.95rem;
+    }
+    
+    .chattingArea .MuiTextField-root {
+        margin-right: 12px;
+    }
+}
+
+/* Large desktop responsiveness for send button */
+@media (min-width: 1025px) {
+    .chattingArea .MuiButton-root {
+        min-width: 110px;
+        height: 56px;
+        border-radius: 28px;
+        font-size: 1rem;
+    }
+    
+    .chattingArea .MuiTextField-root {
+        margin-right: 14px;
+    }
+}
+
+@media (max-width: 500px) {
+    .chattingArea .MuiButton-root {
+        min-width: 80px;
+        height: 45px;
+        border-radius: 22px;
+        font-size: 0.875rem;
+    }
 }
 
 .translatingIndicator {
@@ -248,3 +662,46 @@ justify-content: flex-end;
     border-radius: 8px;
     margin: 10px 0;
 }
+
+/* Extra small screens (below 350px)
+@media (max-width: 350px) {
+    .meetUserVideo {
+        height: 12vh;
+        max-width: 100px;
+        left: 5px;
+    }
+    
+    .buttonContainers {
+        padding: 8px 2px;
+        gap: 4px;
+    }
+    
+    .buttonContainers svg {
+        font-size: 1.5rem;
+    }
+    
+    .conferenceView video {
+        width: 95vw;
+        height: 20vh;
+    }
+    
+    .chatRoom {
+        padding-inline: 10px;
+    }
+    
+    .messageContent {
+        max-width: 80%;
+    }
+    
+    .chattingArea .MuiButton-root {
+        min-width: 60px;
+        height: 40px;
+        font-size: 0.8rem;
+    }
+    
+    .chattingArea .MuiTextField-root {
+        margin-right: 4px;
+        min-width: 0;
+    }
+} */
+

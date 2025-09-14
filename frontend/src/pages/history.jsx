@@ -1,78 +1,118 @@
-import { useContext, useEffect, useState } from "react"
-import { AuthContext } from "../contexts/AuthContext"
-import { useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 import Card from '@mui/material/Card';
-import Box from '@mui/material/Box';
-import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Button from '@mui/material/Button';
+import { Download } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
-import HomeIcon from '@mui/icons-material/Home';
-import { IconButton } from '@mui/material';
+import "./history.css";
 
-export default function History(){
+export default function History() {
+  const { getHistoryOfUser, getMeetingNotes } = useContext(AuthContext);
+  const [meetings, setMeetings] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notesStatus, setNotesStatus] = useState({}); // Store which meetings have notes
 
-    const {getHistoryOfUser} = useContext(AuthContext);
-    const [meetings, setMeetings] = useState([])
+  // Handle Download for specific meeting
+  const handleDownload = async (meetingCode) => {
+    try {
+      const notes = await getMeetingNotes(meetingCode);
+      if (!notes || !notes.trim()) return;
 
-    const routeTo =  useNavigate();
-
-    useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                const history = await getHistoryOfUser();
-                setMeetings(history);
-            } catch {
-                // IMPLEMENT SNACKBAR
-            }
-        }
-
-        fetchHistory();
-    }, [])
-
-    let formatDate = (dateString) => {
-
-        const date = new Date(dateString);
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = (date.getMonth() + 1).toString().padStart(2, "0")
-        const year = date.getFullYear();
-
-        return `${day}/${month}/${year}`
+      const blob = new Blob([notes], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${meetingCode}-notes.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading notes: " + error.message);
     }
+  };
 
-    return(
-        <div>
+  // Fetch history and check notes availability
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const history = await getHistoryOfUser();
+        setMeetings(history);
 
-            <IconButton onClick={() => {
-                routeTo("/dashboard")
-            }}>
-                <HomeIcon />
-            </IconButton >
-            
-            {
-                (meetings.length !== 0) ? meetings.map((e, i) => {
-                    return (
-                        <>
-                            <Card key={i} variant="outlined">
-                                <CardContent>
-                                    <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                                        Code: {e.meetingCode}
-                                    </Typography>
+        // Check if notes exist for each meeting
+        const statusObj = {};
+        for (let m of history) {
+          try {
+            const notes = await getMeetingNotes(m.meetingCode);
+            statusObj[m.meetingCode] = !!(notes && notes.trim());
+          } catch {
+            statusObj[m.meetingCode] = false;
+          }
+        }
+        setNotesStatus(statusObj);
+      } catch {
+        // Handle error with Snackbar if needed
+      }
+    };
+    fetchHistory();
+  }, []);
 
-                                    <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                                        Date: {formatDate(e.date)}
-                                    </Typography>
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
-                                    <button>Generate Summary</button>
+  return (
+    <div
+      className="history-container"
+      style={sidebarOpen ? { width: "460px" } : { width: "60px" }}
+    >
+      <div className="history-header" style={{ marginBottom: "5px" }}>
+        <button
+          className="history-icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <i className="fa-solid fa-clock-rotate-left"></i>
+        </button>
+        {sidebarOpen && <h2 className="history-word">History</h2>}
+      </div>
 
-                                </CardContent>
-                            </Card>
-                        </>
-                    )
-                }) 
-                : 
-                <></>
-            }
+      {sidebarOpen ? (
+        <div className="history-scroll-container">
+          {meetings.length !== 0 ? meetings.slice().reverse().map((e, i) => (
+            <Card key={i} variant="outlined" style={{ padding: "20px 0px 0" }}>
+              <CardContent style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
+                    Code: {e.meetingCode}
+                  </Typography>
+                  <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                    Date: {formatDate(e.date)}
+                  </Typography>
+                </div>
+
+                <div>
+                  <Button variant='contained'>
+                    Summary
+                    <img src="/images/ai.png" alt="" style={{ width: "40px" }} />
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    startIcon={<Download />}
+                    onClick={() => handleDownload(e.meetingCode)}
+                    disabled={!notesStatus[e.meetingCode]} // Disable if no notes
+                  >
+                    Notes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )) : null}
         </div>
-    )
+      ) : null}
+    </div>
+  );
 }

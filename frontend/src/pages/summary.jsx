@@ -42,6 +42,28 @@ export default function Recorder() {
     }
   };
 
+  const handleStop = async (audioBlob) => {
+  const formData = new FormData();
+  formData.append("file", audioBlob, "meeting.wav");
+
+  const res = await fetch("http://localhost:8080/transcribe", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    console.log("Transcript:", data.transcript);
+    console.log("Summary:", data.summary);
+    setTranscript(data.transcript);
+    setSummary(data.summary);
+  } else {
+    console.error("Error:", data.message);
+  }
+};
+
+
   return (
     <div>
       {!recording ? (

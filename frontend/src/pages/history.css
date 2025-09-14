@@ -1,0 +1,59 @@
+.history-scroll-container {
+  height: 83vh;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for .history-scroll-container */
+.history-scroll-container::-webkit-scrollbar {
+  width: 5px;
+  background: #f1f1f1; /* Track color */
+}
+
+.history-scroll-container::-webkit-scrollbar-thumb {
+  background: #665df5;  /* Scrollbar color */
+  border-radius: 6px;
+}
+
+.history-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #4b3ecf;  /* Scrollbar color on hover */
+}
+
+.history-scroll-container::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+.history-icon{
+  border: none;
+  font-size: 23px;
+  padding: 10px 0;
+  color: #665df5;
+  background: transparent
+}
+
+.history-icon:hover{
+  cursor: pointer;
+  color: #665df5;
+  text-shadow:0.5px 0.5px  1.2px #665df5 ;
+}
+
+.history-word{
+  color: #665df5;
+  width: fit-content; 
+  padding: 10px; 
+  text-align: right;
+}
+
+.history-header{
+  display: flex;
+  border-radius: 0 0 0 8px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.history-container{
+  height: 90vh;
+  border-left: 2px solid rgba(0, 0, 0, 0.2);
+  transition: width 0.3s;
+  overflow: hidden;
+}

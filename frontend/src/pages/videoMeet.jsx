@@ -1,18 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useContext } from 'react'
 import io from "socket.io-client";
 import { Badge, IconButton, TextField } from '@mui/material';
 import { Button } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff'
-import styles from "./videoMeet.module.css";
 import CallEndIcon from '@mui/icons-material/CallEnd'
+import styles from "./videoMeet.module.css";
 import MicIcon from '@mui/icons-material/Mic'
 import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
 import Whiteboard from './whiteboard';
+import DrawIcon from '@mui/icons-material/Draw';
 import Recorder from './summary';
+import { AuthContext } from '../contexts/AuthContext';
+// import { get } from 'mongoose';
+
 // import server from '../environment';
 
 const server_url = "http://localhost:8080";
@@ -30,22 +34,28 @@ export default function VideoMeetComponent() {
     var socketRef = useRef();
     let socketIdRef = useRef();
     let localVideoref = useRef();
-    const videoRef = useRef([])
+    const videoRef = useRef([]);
 
     let [videoAvailable, setVideoAvailable] = useState(true);
     let [audioAvailable, setAudioAvailable] = useState(true);
     let [video, setVideo] = useState([]);
     let [audio, setAudio] = useState();
     let [screen, setScreen] = useState();
-    let [showModal, setModal] = useState(true);
+    let [showModal, setModal] = useState(false);
+    let [showDashboard, setShowDashboard] = useState(false);
     let [screenAvailable, setScreenAvailable] = useState();
     let [messages, setMessages] = useState([])
     let [message, setMessage] = useState("");
-    let [newMessages, setNewMessages] = useState(3);
-    let [askForUsername, setAskForUsername] = useState(true);
+    let [newMessages, setNewMessages] = useState(0);
+    
+    let [meetingCode, setMeetingCode] = useState("");
+    // let [askForUsername, setAskForUsername] = useState(true);
     let [username, setUsername] = useState("");
     let [videos, setVideos] = useState([])
 
+    const { getUsername} = useContext(AuthContext);
+    const {getHistoryOfUser} = useContext(AuthContext);
+    // const {getMeetingNotes} = useContext(AuthContext);
     const [stream, setStream] = useState(null);
     const [selectedLang, setSelectedLang] = useState('en'); // default English
     const [isTranslating, setIsTranslating] = useState(false);
@@ -59,18 +69,70 @@ export default function VideoMeetComponent() {
     useEffect(() => {
         console.log("HELLO")
         getPermissions();
-    })
+        getMedia();
+        fetchMeetingCode();
+    }, []) // Empty dependency array - only run once on mount
 
-    let getDislayMedia = () => {
-        if (screen) {
-            if (navigator.mediaDevices.getDisplayMedia) {
-                navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-                    .then(getDislayMediaSuccess)
-                    .then((stream) => { })
-                    .catch((e) => console.log(e))
+
+const fetchMeetingCode = async () => {
+    try {
+        const history = await getHistoryOfUser();
+        if (history && history.length > 0) {
+            const latestMeeting = history[history.length - 1];
+            setMeetingCode(latestMeeting.meetingCode);
+            console.log("MEETING CODE IS ", latestMeeting.meetingCode);
+        } else {
+            console.log("No meeting found for this user");
+        }
+    } catch (e) {
+        console.error("Error fetching meeting code:", e);
+    }
+};
+
+
+// Removed getMessages call - messages are handled through socket events
+
+
+// Removed duplicate chat message handler - handled in connectToSocketServer
+
+
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+            try {
+                const name = await getUsername();
+                setUsername(name);
+            } catch {
+                // IMPLEMENT SNACKBAR
             }
         }
+
+        fetchUsername();
+    }, [])
+
+    // useEffect(() => {
+    //     const fetchMeetingNotes = async () => {
+    //         try {
+    //             const notes = await getMeetingNotes();
+    //             setMeetingNotes(notes);
+    //         } catch {
+    //             // IMPLEMENT SNACKBAR
+    //         }
+    //     }
+
+    //     fetchMeetingNotes();
+    // }, [])
+
+    //check for screen sharing
+    let getDislayMedia = () => {
+        if (navigator.mediaDevices.getDisplayMedia) {
+            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })   //both audio and video will included in screen share
+                .then(getDislayMediaSuccess)
+                .then((stream) => { })
+                .catch((e) => console.log(e))
+        }
     }
+
 
     const getPermissions = async () => {
         try {
@@ -78,10 +140,10 @@ export default function VideoMeetComponent() {
             let gotAudio = false;
 
             try {
-                const videoPermission = await navigator.mediaDevices.getUserMedia({ video: true });
+                const videoPermission = await navigator.mediaDevices.getUserMedia({ video: true }); //This line requests permission to access the user's camera.
                 setVideoAvailable(true);
                 gotVideo = true;
-                videoPermission.getTracks().forEach(track => track.stop()); // immediately stop after checking
+                videoPermission.getTracks().forEach(track => track.stop()); // it prevents the camera's light from staying on
             } catch (e) {
                 console.log('Video permission denied');
                 setVideoAvailable(false);
@@ -97,15 +159,22 @@ export default function VideoMeetComponent() {
                 setAudioAvailable(false);
             }
 
-            if (navigator.mediaDevices.getDisplayMedia) {
+            if (navigator.mediaDevices.getDisplayMedia) {  //This checks for the browser's support for screen sharing
                 setScreenAvailable(true);
             } else {
                 setScreenAvailable(false);
             }
 
-            if (gotVideo || gotAudio) {
+            if (gotVideo || gotAudio) { 
+            // This condition ensures that a media stream is only requested if either camera or microphone 
+            // permission was granted
                 const userMediaStream = await navigator.mediaDevices.getUserMedia({ video: gotVideo, audio: gotAudio });
-                window.localStream = userMediaStream;
+                window.localStream = userMediaStream; // The live stream is stored in a global variable (window.localStream), making it accessible to other parts of the application, such as for sending it over a peer connection
+
+
+                // This code connects the obtained media stream to a video element in the DOM (Document Object Model), making the user's 
+                // camera feed visible on the screen.
+                //  localVideoref is likely a React ref object
                 if (localVideoref.current) {
                     localVideoref.current.srcObject = userMediaStream;
                 }
@@ -115,12 +184,10 @@ export default function VideoMeetComponent() {
         }
     };
 
-
     useEffect(() => {
         if (video !== undefined && audio !== undefined) {
             getUserMedia();
             console.log("SET STATE HAS ", video, audio);
-
         }       
     }, [video, audio])
 
@@ -132,7 +199,7 @@ export default function VideoMeetComponent() {
 
     let getUserMediaSuccess = (stream) => {
         try {
-            window.localStream.getTracks().forEach(track => track.stop())
+            window.localStream.getTracks().forEach(track => track.stop())   //It ensures that if there's an existing window.localStream (from a previous call), all its active tracks (audio and video) are stopped
         } catch (e) { 
             console.log(e) 
         }
@@ -140,6 +207,7 @@ export default function VideoMeetComponent() {
         window.localStream = stream
         localVideoref.current.srcObject = stream
 
+        //Sharing the Stream with Peers
         for (let id in connections) {
             if (id === socketIdRef.current) continue
 
@@ -155,6 +223,7 @@ export default function VideoMeetComponent() {
             })
         }
 
+        //Event Listener for Stream End
         stream.getTracks().forEach(track => track.onended = () => {
             setVideo(false);
             setAudio(false);
@@ -184,9 +253,9 @@ export default function VideoMeetComponent() {
         })
     }
 
-    let getUserMedia = () => {
+    let getUserMedia = () => {  //The getUserMedia function is designed to request a user's camera and/or microphone access
         if ((video && videoAvailable) || (audio && audioAvailable)) {
-            navigator.mediaDevices.getUserMedia({ video: video, audio: audio })
+            navigator.mediaDevices.getUserMedia({ video: video, audio: audio })   //If the condition is met, this WebRTC API call prompts the user for access to their camera and/or microphone
                 .then(getUserMediaSuccess)
                 .then((stream) => { })
                 .catch((e) => console.log(e))
@@ -198,7 +267,7 @@ export default function VideoMeetComponent() {
         }
     }
     
-    let getDislayMediaSuccess = (stream) => {
+    let getDislayMediaSuccess = (stream) => {  //This function is a callback that executes after the user successfully selects a screen, window, or tab to share
         console.log("HERE");
         
         try {
@@ -224,6 +293,7 @@ export default function VideoMeetComponent() {
             })
         }
 
+        //The onended event fires when the screen-sharing session is stopped
         stream.getTracks().forEach(track => track.onended = () => {
             setScreen(false)
 
@@ -245,7 +315,7 @@ export default function VideoMeetComponent() {
     let gotMessageFromServer = (fromId, message) => {
         var signal = JSON.parse(message)
 
-        if (fromId !== socketIdRef.current) {
+        if (fromId !== socketIdRef.current && connections[fromId]) {
             if (signal.sdp) {
                 connections[fromId].setRemoteDescription(new RTCSessionDescription(signal.sdp)).then(() => {
                     if (signal.sdp.type === 'offer') {
@@ -265,16 +335,41 @@ export default function VideoMeetComponent() {
     }
 
     let connectToSocketServer = () => {
+        // Prevent multiple connections
+        if (socketRef.current && socketRef.current.connected) {
+            console.log("Socket already connected, skipping...");
+            return;
+        }
+        
+        console.log("Creating new socket connection...");
         socketRef.current = io.connect(server_url, { secure: false })
         server_url
         socketRef.current.on('signal', gotMessageFromServer)
 
+        // Set up chat message handler once
+        socketRef.current.on('chat-message', (data, sender, socketIdSender) => {
+            console.log('Received chat message:', { 
+                data, 
+                sender, 
+                socketIdSender, 
+                currentId: socketIdRef.current,
+                isOwnMessage: socketIdSender === socketIdRef.current
+            });
+            if (socketIdSender === socketIdRef.current) {
+                console.log('Skipping own message');
+                return; // skip your own messages
+            }
+            addMessage(data, sender, socketIdSender);
+        });
+
         socketRef.current.on('connect', () => {
+            // Clear previous messages when joining a new call
+            setMessages([]);
+            setNewMessages(0);
+            
             socketRef.current.emit('join-call', window.location.href)
             socketIdRef.current = socketRef.current.id
 
-            socketRef.current.on('chat-message', addMessage)
-            
             socketRef.current.on('user-left', (id) => {
                 setVideos((videos) => videos.filter((video) => video.socketId !== id))
             })
@@ -326,7 +421,6 @@ export default function VideoMeetComponent() {
                         }
                     };
 
-
                     // Add the local video stream
                     if (window.localStream !== undefined && window.localStream !== null) {
                         connections[socketListId].addStream(window.localStream)
@@ -374,6 +468,7 @@ export default function VideoMeetComponent() {
         return Object.assign(stream.getVideoTracks()[0], { enabled: false })
     }
     
+    // functions are used to toggle the on/off state of the user's camera
     const handleVideo = () => {
         setVideo((prevVideo) => {
             const newVideoState = !prevVideo;
@@ -382,6 +477,7 @@ export default function VideoMeetComponent() {
         });
     };
 
+    //functions are used to toggle the on/off state of the user's microphone
     const handleAudio = () => {
         setAudio((prevAudio) => {
             const newAudioState = !prevAudio;
@@ -405,7 +501,7 @@ export default function VideoMeetComponent() {
             let tracks = localVideoref.current.srcObject.getTracks()
             tracks.forEach(track => track.stop())
         } catch (e) { }
-        window.location.href = "/dashboard"
+            window.location.href = "/dashboard"
     }
 
     let openChat = () => {
@@ -424,6 +520,25 @@ export default function VideoMeetComponent() {
     const addMessage = async (data, sender, socketIdSender) => {
         console.log('addMessage called:', { data, sender, socketIdSender, selectedLang });
         
+        // Skip adding message if it's from the current user (already added locally)
+        if (socketIdSender === socketIdRef.current) {
+            console.log('Skipping own message');
+            return;
+        }
+        
+        // Check for duplicate messages (same content and sender within last 5 seconds)
+        const now = Date.now();
+        const isDuplicate = messages.some(msg => 
+            msg.original === data && 
+            msg.sender === sender && 
+            (now - (msg.timestamp || 0)) < 5000
+        );
+        
+        if (isDuplicate) {
+            console.log('Skipping duplicate message');
+            return;
+        }
+        
         let translatedText = data;
 
         // Only translate if user selected a different language and it's not their own message
@@ -435,7 +550,12 @@ export default function VideoMeetComponent() {
             console.log('Translation result:', translatedText);
         }
 
-        const newMessage = { sender, original: data, translated: translatedText };
+        const newMessage = { 
+            sender, 
+            original: data, 
+            translated: translatedText,
+            timestamp: now
+        };
         console.log('Adding message:', newMessage);
         
         setMessages((prevMessages) => [
@@ -443,9 +563,7 @@ export default function VideoMeetComponent() {
             newMessage
         ]);
 
-        if (socketIdSender !== socketIdRef.current) {
-            setNewMessages((prevNewMessages) => prevNewMessages + 1);
-        }
+        setNewMessages((prevNewMessages) => prevNewMessages + 1);
     };
 
     const handleLanguageChange = async (newLang) => {
@@ -476,28 +594,28 @@ export default function VideoMeetComponent() {
     };
 
 
-    const sendMessage = () => {
-        if (!message.trim()) return;
-        
-        // Add message to local state immediately
-        const newMessage = { 
-            sender: username, 
-            original: message, 
-            translated: message, // No translation needed for own messages
-            isOwn: true 
-        };
-        setMessages(prevMessages => [...prevMessages, newMessage]);
-        
-        // Send to server
-        socketRef.current.emit('chat-message', message, username);
-        setMessage("");
-    };
+const sendMessage = async () => {
+  if (!message.trim()) return;
 
+  console.log('Sending message:', { message, username, socketId: socketRef.current.id });
 
-    let connect = () => {
-        setAskForUsername(false);
-        getMedia();
-    }
+  const newMessage = { 
+    sender: username, 
+    original: message, 
+    isOwn: true, 
+    socketId: socketRef.current.id
+  };
+  setMessages(prev => [...prev, newMessage]);
+
+  socketRef.current.emit('chat-message', message, username);
+
+  setMessage("");
+};
+
+    // let connect = () => {
+    //     setAskForUsername(false);
+    //     getMedia();
+    // }
 
     const translateText = async (text, toLang) => {
         try {
@@ -522,20 +640,22 @@ export default function VideoMeetComponent() {
 
     return (
         <div>
-            {askForUsername === true 
-                ?
-                <div>
-                    <h2>Enter into Lobby </h2>
-                    <TextField id="outlined-basic" label="Username" value={username} onChange={e => setUsername(e.target.value)} variant="outlined" />
-                    <Button variant="contained" onClick={connect}>Connect</Button>
-
-                    <div>
-                        <video ref={localVideoref} autoPlay muted></video>
-                    </div>
-                </div> 
-                :
+    
+                    {/* <video ref={localVideoref} autoPlay muted></video> */}
+                
 
                 <div className={styles.meetVideoContainer}>
+                           {/* <Recorder/>      */}
+
+                     {showDashboard 
+                            ? 
+                            <div className={styles.whiteboard}>
+                                <Whiteboard/>
+                            </div>
+                            :
+                            <></>
+                        }
+
                     {showModal 
                         ? 
                         <div className={styles.chatRoom}>
@@ -581,16 +701,17 @@ export default function VideoMeetComponent() {
                                             <div className={styles.messageAvatar}>
                                                 {msg.sender ? msg.sender.charAt(0).toUpperCase() : 'U'}
                                             </div>
+
+
                                             <div className={styles.messageContent}>
                                                 <div className={styles.messageHeader}>
-                                                    <span className={styles.senderName}>{msg.sender}</span>
-                                                    <span className={styles.timestamp}>
-                                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                                                    <span className={styles.senderName}>{msg.sender ? msg.sender : "user"}</span>
                                                 </div>
+
                                                 <div className={styles.messageBubble}>
-                                                    {msg.translated || msg.original || msg.data}
+                                                    {msg.translated || msg.original }
                                                 </div>
+                                                
                                                 {msg.original && msg.translated && msg.original !== msg.translated && !msg.isOwn && (
                                                     <div className={styles.originalText}>
                                                         Original: {msg.original}
@@ -614,6 +735,7 @@ export default function VideoMeetComponent() {
                                         id="outlined-basic" 
                                         label="Enter Your chat" 
                                         variant="outlined" 
+                                        fullWidth
                                     />
                                     <Button variant='contained' onClick={sendMessage}>Send</Button>
                                 </div>
@@ -623,25 +745,21 @@ export default function VideoMeetComponent() {
                         <></>
                     }
 
+             
+
                     <div className={styles.buttonContainers}>
                         <IconButton onClick={handleVideo} style={{ color: "white" }}>
                             {(video === true) ? <VideocamIcon /> : <VideocamOffIcon />}
                         </IconButton>
 
-                        <IconButton onClick={handleEndCall} style={{ color: "red" }}>
-                            <CallEndIcon  />
-                        </IconButton>
 
-<div className={styles.whiteboard}>
-  {/* Your third-party component */}
-<Whiteboard/>
-
-</div>
-
-<Recorder/>
 
                         <IconButton onClick={handleAudio} style={{ color: "white" }}>
                             {audio === true ? <MicIcon /> : <MicOffIcon />}
+                        </IconButton>/
+
+                        <IconButton onClick={handleEndCall} style={{ color: "red" }}>
+                            <CallEndIcon  />
                         </IconButton>
 
                         {screenAvailable === true 
@@ -658,7 +776,12 @@ export default function VideoMeetComponent() {
                                 <ChatIcon />                        
                             </IconButton>
                         </Badge>
+
+                        <IconButton onClick={() => setShowDashboard(!showDashboard)} style={{ color: "white" }}>
+                            <DrawIcon/>
+                        </IconButton>
                     </div>
+                    
 
                     <video className={styles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
 
@@ -680,7 +803,8 @@ export default function VideoMeetComponent() {
                     </div>
 
                 </div>
-            }   
+            
         </div>
     )
 }
+ 

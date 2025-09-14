@@ -6,7 +6,7 @@ import httpStatus from "http-status";
 export const AuthContext = createContext({});
 
 const client = axios.create({
-    baseURL: "http://localhost:8080/users"
+    baseURL: "http://localhost:8080/"
 })
 
 export const AuthProvider = ({children}) => {
@@ -55,6 +55,20 @@ export const AuthProvider = ({children}) => {
         }
     }
 
+    const getUsername = async () => {
+        try {
+            let request = await client.get("/get_username", {
+                params: {
+                    token: localStorage.getItem("token")
+                }
+            });
+            return request.data.username
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+
     const getHistoryOfUser = async () => {
         try {
             let request = await client.get("/get_all_activity", {
@@ -80,8 +94,41 @@ export const AuthProvider = ({children}) => {
         }
     }
 
+const saveMeetingNotes = async (meetingCode, notes) => {
+  try {
+    const res = await client.post("/save_meeting_notes", {
+      meetingCode,
+      notes
+    });
+    return res.data;
+  } catch (err) {
+    console.error("Error saving meeting notes:", err);
+    throw err;
+  }
+};
+
+
+    const getMeetingNotes = async (meetingCode) => {
+        try {
+            let request = await client.get(`/get_meeting_notes/${meetingCode}`);
+            return request.data
+        } catch (e) {
+            throw e;    
+        }
+    }
+
+    const saveMessage = async (meetingCode, sender, message) => {
+  try {
+    return await client.post("/save_message", { meetingCode, sender, message });
+  } catch (err) {
+    throw err;
+  }
+};
+
+// Removed getMessages function - messages handled through socket events
+
     const data = {
-        userData, setUserData, handleRegister, handleLogin, addToUserHistory, getHistoryOfUser
+        userData, setUserData, handleRegister, handleLogin, addToUserHistory, getHistoryOfUser, getUsername, getMeetingNotes, saveMeetingNotes, saveMessage
     }
 
     return(
