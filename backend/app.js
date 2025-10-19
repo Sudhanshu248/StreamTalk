@@ -7,6 +7,7 @@ import {createServer} from "node:http";
 import {connectToSocket} from "./controllers/socketManager.js";
 import userRoutes from "./routes/user.routes.js"
 import meetingRoutes from "./routes/meeting.routes.js"
+import messageRoutes from "./routes/message.routes.js"
 import fetch from 'node-fetch';
 import multer from "multer";
 import { GridFsStorage } from 'multer-gridfs-storage';
@@ -87,6 +88,7 @@ const connectDB = async () => {
 
 app.use('/', userRoutes);
 app.use('/', meetingRoutes);
+app.use('/', messageRoutes);
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {

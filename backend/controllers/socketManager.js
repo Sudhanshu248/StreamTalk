@@ -1,9 +1,10 @@
 import { Server } from "socket.io";
 import fs from 'fs';
+import { Message } from '../models/message.models.js';
 import path from 'path';
 
 let connections = {}
-let messages = {}
+let messages = {} // REMOVE in-memory messages
 let timeOnline = {}
 
 // File path for storing messages
@@ -72,12 +73,21 @@ socket.on("join-call", (path) => {
     // Notify existing users in the room about the new user
     io.to(path).emit("user-joined", socket.id, connections[path]);
 
-    // Send previous messages only to the user who joined
-    if (messages[path]) {
-        messages[path].forEach(msg => {
-            io.to(socket.id).emit("chat-message", msg.data, msg.sender, msg["socket-id-sender"]);
-        });
-    }
+    // Send previous messages from MongoDB to the user who joined
+    (async () => {
+        // Extract meetingCode from path
+        const meetingCode = extractMeetingCodeFromPath(path);
+        if (meetingCode) {
+            try {
+                const chatMessages = await Message.find({ meetingCode }).sort({ timestamp: 1 });
+                chatMessages.forEach(msg => {
+                    io.to(socket.id).emit("chat-message", msg.message, msg.sender, socket.id, msg._id?.toString(), msg.timestamp);
+                });
+            } catch (e) {
+                console.error("Error loading chat messages from DB:", e);
+            }
+        }
+    })();
 });
 
 
@@ -95,7 +105,8 @@ socket.on("join-call", (path) => {
 
 
         
-socket.on("chat-message", (data, sender) => {
+socket.on("chat-message", async (data, sender) => {
+    // Find the room the user is in
     const [matchingRoom, found] = Object.entries(connections)
         .reduce(([room, isFound], [roomKey, roomValue]) => {
             if (!isFound && roomValue.includes(socket.id)) {
@@ -105,19 +116,28 @@ socket.on("chat-message", (data, sender) => {
         }, ['', false]);
 
     if (found) {
-        if (!messages[matchingRoom]) messages[matchingRoom] = [];
-
-        messages[matchingRoom].push({
-            sender: sender,
-            data: data,
-            "socket-id-sender": socket.id
-        });
-
-        // Send only to others in the room, not the sender
-        console.log(`Broadcasting message to room ${matchingRoom}, connections:`, connections[matchingRoom]);
-        socket.broadcast.to(matchingRoom).emit("chat-message", data, sender, socket.id);
+        // Save to MongoDB Message collection
+        const meetingCode = extractMeetingCodeFromPath(matchingRoom);
+        if (meetingCode) {
+            try {
+                const newMsg = new Message({ meetingCode, sender, message: data });
+                const savedMsg = await newMsg.save();
+                // Emit to all (including sender) with _id and timestamp
+                io.to(matchingRoom).emit("chat-message", data, sender, socket.id, savedMsg._id?.toString(), savedMsg.timestamp);
+                return;
+            } catch (e) {
+                console.error("Error saving chat message to Message collection:", e);
+            }
+        }
     }
 });
+
+function extractMeetingCodeFromPath(path) {
+    // Example: if path is a URL, extract the code from it
+    // Adjust this logic to match how you use meeting codes in your URLs
+    const match = path.match(/([A-Za-z0-9]+)$/);
+    return match ? match[1] : null;
+}
 
 
 

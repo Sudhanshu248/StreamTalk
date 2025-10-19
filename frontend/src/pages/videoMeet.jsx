@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useContext } from 'react'
+import axios from 'axios';
 import io from "socket.io-client";
+import clientServer from '../axiosConfig';
 import { Badge, IconButton, TextField } from '@mui/material';
 import { Button } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -35,6 +37,7 @@ export default function VideoMeetComponent() {
     let socketIdRef = useRef();
     let localVideoref = useRef();
     const videoRef = useRef([]);
+    const isConnecting = useRef(false);
 
     let [videoAvailable, setVideoAvailable] = useState(true);
     let [audioAvailable, setAudioAvailable] = useState(true);
@@ -47,18 +50,20 @@ export default function VideoMeetComponent() {
     let [messages, setMessages] = useState([])
     let [message, setMessage] = useState("");
     let [newMessages, setNewMessages] = useState(0);
+    let [messagesLoadedFromDB, setMessagesLoadedFromDB] = useState(false);
+    let [currentMeetingCode, setCurrentMeetingCode] = useState(null);
     
     let [meetingCode, setMeetingCode] = useState("");
     // let [askForUsername, setAskForUsername] = useState(true);
     let [username, setUsername] = useState("");
     let [videos, setVideos] = useState([])
 
-    const { getUsername} = useContext(AuthContext);
-    const {getHistoryOfUser} = useContext(AuthContext);
+    const { getUsername, saveMessage, getHistoryOfUser} = useContext(AuthContext);
     // const {getMeetingNotes} = useContext(AuthContext);
     const [stream, setStream] = useState(null);
     const [selectedLang, setSelectedLang] = useState('en'); // default English
     const [isTranslating, setIsTranslating] = useState(false);
+    const [cameraError, setCameraError] = useState(null);
 
     // TODO
     // if(isChrome() === false) {
@@ -71,16 +76,86 @@ export default function VideoMeetComponent() {
         getPermissions();
         getMedia();
         fetchMeetingCode();
+        
+        // Cleanup function
+        return () => {
+            isConnecting.current = false;
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
     }, []) // Empty dependency array - only run once on mount
+
+    // Load messages from DB when meeting code and username are available
+    useEffect(() => {
+        let didCancel = false;
+        console.log('Message loading useEffect triggered:', {
+            showModal,
+            meetingCode,
+            username,
+            currentMeetingCode,
+            messagesLoadedFromDB
+        });
+        
+        // Load messages when we have meeting code and username, regardless of modal state
+        if (meetingCode && username && currentMeetingCode !== meetingCode) {
+            console.log('Loading messages from database for meeting:', meetingCode);
+            setCurrentMeetingCode(meetingCode);
+            setMessagesLoadedFromDB(true);
+            clientServer.get(`/get_messages/${meetingCode}`)
+                .then(res => {
+                    if (didCancel) return;
+                    console.log('Messages loaded from database:', res.data);
+                    
+                    // Check if response is valid JSON array
+                    if (Array.isArray(res.data)) {
+                        // Mark messages as own if sender matches current user
+                        const loadedMessages = res.data.map(msg => ({
+                            _id: msg._id,
+                            sender: msg.sender,
+                            original: msg.message,
+                            isOwn: msg.sender === username,
+                            timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
+                        }));
+                        setMessages(loadedMessages);
+                    } else {
+                        console.warn('Invalid response format from API:', res.data);
+                        setMessages([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading messages from database:', error);
+                    setMessagesLoadedFromDB(false); // Reset flag on error so it can retry
+                    setCurrentMeetingCode(null); // Reset meeting code on error
+                });
+        }
+        return () => { didCancel = true; };
+    }, [meetingCode, username, currentMeetingCode]);
 
 
 const fetchMeetingCode = async () => {
     try {
+        console.log("Fetching meeting code...");
         const history = await getHistoryOfUser();
+        console.log("User history:", history);
+        
         if (history && history.length > 0) {
             const latestMeeting = history[history.length - 1];
-            setMeetingCode(latestMeeting.meetingCode);
-            console.log("MEETING CODE IS ", latestMeeting.meetingCode);
+            const newMeetingCode = latestMeeting.meetingCode;
+            
+            console.log("Latest meeting code:", newMeetingCode);
+            console.log("Current meeting code:", currentMeetingCode);
+            
+            // Only reset if this is actually a different meeting
+            if (currentMeetingCode && currentMeetingCode !== newMeetingCode) {
+                console.log("Different meeting detected, resetting flags");
+                setMessagesLoadedFromDB(false);
+                setCurrentMeetingCode(null);
+                setMessages([]); // Clear existing messages for new meeting
+            }
+            
+            setMeetingCode(newMeetingCode);
+            console.log("MEETING CODE SET TO:", newMeetingCode);
         } else {
             console.log("No meeting found for this user");
         }
@@ -100,9 +175,12 @@ const fetchMeetingCode = async () => {
     useEffect(() => {
         const fetchUsername = async () => {
             try {
+                console.log("Fetching username...");
                 const name = await getUsername();
+                console.log("Username fetched:", name);
                 setUsername(name);
-            } catch {
+            } catch (error) {
+                console.error("Error fetching username:", error);
                 // IMPLEMENT SNACKBAR
             }
         }
@@ -139,13 +217,27 @@ const fetchMeetingCode = async () => {
             let gotVideo = false;
             let gotAudio = false;
 
+            // Check if we already have permissions to avoid duplicate requests
+            if (window.localStream) {
+                console.log('Stream already exists, skipping permission check');
+                return;
+            }
+
             try {
                 const videoPermission = await navigator.mediaDevices.getUserMedia({ video: true }); //This line requests permission to access the user's camera.
                 setVideoAvailable(true);
                 gotVideo = true;
                 videoPermission.getTracks().forEach(track => track.stop()); // it prevents the camera's light from staying on
+                console.log('Video permission granted');
             } catch (e) {
-                console.log('Video permission denied');
+                console.log('Video permission denied:', e.message);
+                if (e.name === 'NotReadableError') {
+                    console.log('Camera is already in use by another application. Please close other applications using the camera and refresh the page.');
+                    setCameraError('Camera is in use by another application. Please close other apps and retry.');
+                } else if (e.name === 'NotAllowedError') {
+                    console.log('Camera permission denied by user. Please allow camera access and refresh the page.');
+                    setCameraError('Camera permission denied. Please allow camera access and retry.');
+                }
                 setVideoAvailable(false);
             }
 
@@ -154,8 +246,9 @@ const fetchMeetingCode = async () => {
                 setAudioAvailable(true);
                 gotAudio = true;
                 audioPermission.getTracks().forEach(track => track.stop());
+                console.log('Audio permission granted');
             } catch (e) {
-                console.log('Audio permission denied');
+                console.log('Audio permission denied:', e.message);
                 setAudioAvailable(false);
             }
 
@@ -168,19 +261,36 @@ const fetchMeetingCode = async () => {
             if (gotVideo || gotAudio) { 
             // This condition ensures that a media stream is only requested if either camera or microphone 
             // permission was granted
-                const userMediaStream = await navigator.mediaDevices.getUserMedia({ video: gotVideo, audio: gotAudio });
-                window.localStream = userMediaStream; // The live stream is stored in a global variable (window.localStream), making it accessible to other parts of the application, such as for sending it over a peer connection
+                try {
+                    const userMediaStream = await navigator.mediaDevices.getUserMedia({ video: gotVideo, audio: gotAudio });
+                    window.localStream = userMediaStream; // The live stream is stored in a global variable (window.localStream), making it accessible to other parts of the application, such as for sending it over a peer connection
+                    setStream(userMediaStream); // Update the stream state as well
 
-
-                // This code connects the obtained media stream to a video element in the DOM (Document Object Model), making the user's 
-                // camera feed visible on the screen.
-                //  localVideoref is likely a React ref object
-                if (localVideoref.current) {
-                    localVideoref.current.srcObject = userMediaStream;
+                    // This code connects the obtained media stream to a video element in the DOM (Document Object Model), making the user's 
+                    // camera feed visible on the screen.
+                    //  localVideoref is likely a React ref object
+                    if (localVideoref.current) {
+                        localVideoref.current.srcObject = userMediaStream;
+                    }
+                    console.log('Media stream created successfully');
+                } catch (error) {
+                    console.error('Error creating media stream:', error);
+                    if (error.name === 'NotReadableError') {
+                        console.log('Camera is already in use by another application. Retrying in 3 seconds...');
+                        // Retry after 3 seconds
+                        setTimeout(() => {
+                            if (!window.localStream) {
+                                console.log('Retrying media stream creation...');
+                                getPermissions();
+                            }
+                        }, 3000);
+                    } else if (error.name === 'NotAllowedError') {
+                        console.log('Camera permission denied. Please allow camera access in your browser settings.');
+                    }
                 }
             }
         } catch (error) {
-            console.log(error);
+            console.error('Error in getPermissions:', error);
         }
     };
 
@@ -199,12 +309,15 @@ const fetchMeetingCode = async () => {
 
     let getUserMediaSuccess = (stream) => {
         try {
-            window.localStream.getTracks().forEach(track => track.stop())   //It ensures that if there's an existing window.localStream (from a previous call), all its active tracks (audio and video) are stopped
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop())   //It ensures that if there's an existing window.localStream (from a previous call), all its active tracks (audio and video) are stopped
+            }
         } catch (e) { 
             console.log(e) 
         }
 
         window.localStream = stream
+        setStream(stream) // Update the stream state as well
         localVideoref.current.srcObject = stream
 
         //Sharing the Stream with Peers
@@ -271,12 +384,15 @@ const fetchMeetingCode = async () => {
         console.log("HERE");
         
         try {
-            window.localStream.getTracks().forEach(track => track.stop())
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop())
+            }
         } catch (e) { 
             console.log(e) 
         }
 
         window.localStream = stream
+        setStream(stream) // Update the stream state as well
         localVideoref.current.srcObject = stream
 
         for (let id in connections) {
@@ -341,30 +457,25 @@ const fetchMeetingCode = async () => {
             return;
         }
         
+        if (isConnecting.current) {
+            console.log("Socket connection already in progress, skipping...");
+            return;
+        }
+        
+        isConnecting.current = true;
         console.log("Creating new socket connection...");
         socketRef.current = io.connect(server_url, { secure: false })
         server_url
         socketRef.current.on('signal', gotMessageFromServer)
 
         // Set up chat message handler once
-        socketRef.current.on('chat-message', (data, sender, socketIdSender) => {
-            console.log('Received chat message:', { 
-                data, 
-                sender, 
-                socketIdSender, 
-                currentId: socketIdRef.current,
-                isOwnMessage: socketIdSender === socketIdRef.current
-            });
-            if (socketIdSender === socketIdRef.current) {
-                console.log('Skipping own message');
-                return; // skip your own messages
-            }
-            addMessage(data, sender, socketIdSender);
+        socketRef.current.on('chat-message', (data, sender, socketIdSender, msgId, msgTimestamp) => {
+            // Always add the message, including own, and pass _id/timestamp if available
+            addMessage(data, sender, socketIdSender, msgId, msgTimestamp);
         });
 
         socketRef.current.on('connect', () => {
-            // Clear previous messages when joining a new call
-            setMessages([]);
+            // Don't reset the loaded flag here - let the meeting code logic handle it
             setNewMessages(0);
             
             socketRef.current.emit('join-call', window.location.href)
@@ -472,7 +583,21 @@ const fetchMeetingCode = async () => {
     const handleVideo = () => {
         setVideo((prevVideo) => {
             const newVideoState = !prevVideo;
-            stream.getVideoTracks()[0].enabled = newVideoState;
+            try {
+                if (window.localStream) {
+                    const videoTracks = window.localStream.getVideoTracks();
+                    if (videoTracks.length > 0) {
+                        videoTracks[0].enabled = newVideoState;
+                        console.log('Video track enabled:', newVideoState);
+                    } else {
+                        console.warn('No video tracks found');
+                    }
+                } else {
+                    console.warn('No local stream available');
+                }
+            } catch (error) {
+                console.error('Error toggling video:', error);
+            }
             return newVideoState;
         });
     };
@@ -481,7 +606,21 @@ const fetchMeetingCode = async () => {
     const handleAudio = () => {
         setAudio((prevAudio) => {
             const newAudioState = !prevAudio;
-            stream.getAudioTracks()[0].enabled = newAudioState;
+            try {
+                if (window.localStream) {
+                    const audioTracks = window.localStream.getAudioTracks();
+                    if (audioTracks.length > 0) {
+                        audioTracks[0].enabled = newAudioState;
+                        console.log('Audio track enabled:', newAudioState);
+                    } else {
+                        console.warn('No audio tracks found');
+                    }
+                } else {
+                    console.warn('No local stream available');
+                }
+            } catch (error) {
+                console.error('Error toggling audio:', error);
+            }
             return newAudioState;
         });
     };
@@ -517,53 +656,41 @@ const fetchMeetingCode = async () => {
         setMessage(e.target.value);
     }
 
-    const addMessage = async (data, sender, socketIdSender) => {
-        console.log('addMessage called:', { data, sender, socketIdSender, selectedLang });
-        
-        // Skip adding message if it's from the current user (already added locally)
-        if (socketIdSender === socketIdRef.current) {
-            console.log('Skipping own message');
+    const addMessage = async (data, sender, socketIdSender, msgId = undefined, msgTimestamp = undefined) => {
+        // Use _id for deduplication if available
+        const isOwn = sender === username;
+        if (msgId && messages.some(msg => msg._id === msgId)) {
+            console.log('Duplicate message detected by _id:', msgId);
             return;
         }
-        
-        // Check for duplicate messages (same content and sender within last 5 seconds)
-        const now = Date.now();
-        const isDuplicate = messages.some(msg => 
-            msg.original === data && 
-            msg.sender === sender && 
-            (now - (msg.timestamp || 0)) < 5000
+        // Otherwise, deduplicate by sender/content/timestamp
+        const now = msgTimestamp ? new Date(msgTimestamp).getTime() : Date.now();
+        const isDuplicate = messages.some(msg =>
+            msg.original === data &&
+            msg.sender === sender &&
+            (Math.abs((msg.timestamp || now) - now) < 10000) // Increased time window to 10 seconds
         );
-        
         if (isDuplicate) {
-            console.log('Skipping duplicate message');
+            console.log('Duplicate message detected by content/timestamp:', data);
             return;
         }
-        
-        let translatedText = data;
 
-        // Only translate if user selected a different language and it's not their own message
-        if (selectedLang !== 'en' && socketIdSender !== socketIdRef.current) {
-            console.log('Translating message:', data, 'to:', selectedLang);
+        let translatedText = data;
+        if (selectedLang !== 'en' && !isOwn) {
             setIsTranslating(true);
             translatedText = await translateText(data, selectedLang);
             setIsTranslating(false);
-            console.log('Translation result:', translatedText);
         }
-
-        const newMessage = { 
-            sender, 
-            original: data, 
+        const newMessage = {
+            _id: msgId,
+            sender,
+            original: data,
             translated: translatedText,
+            isOwn,
             timestamp: now
         };
-        console.log('Adding message:', newMessage);
-        
-        setMessages((prevMessages) => [
-            ...prevMessages,
-            newMessage
-        ]);
-
-        setNewMessages((prevNewMessages) => prevNewMessages + 1);
+        setMessages(prevMessages => [...prevMessages, newMessage]);
+        setNewMessages(prevNewMessages => prevNewMessages + 1);
     };
 
     const handleLanguageChange = async (newLang) => {
@@ -595,21 +722,10 @@ const fetchMeetingCode = async () => {
 
 
 const sendMessage = async () => {
-  if (!message.trim()) return;
-
-  console.log('Sending message:', { message, username, socketId: socketRef.current.id });
-
-  const newMessage = { 
-    sender: username, 
-    original: message, 
-    isOwn: true, 
-    socketId: socketRef.current.id
-  };
-  setMessages(prev => [...prev, newMessage]);
-
-  socketRef.current.emit('chat-message', message, username);
-
-  setMessage("");
+    if (!message.trim()) return;
+    // Only emit to socket, do not add to messages array directly
+    socketRef.current.emit('chat-message', message, username);
+    setMessage("");
 };
 
     // let connect = () => {
@@ -696,6 +812,12 @@ const sendMessage = async () => {
                                 </div>
 
                                 <div className={styles.chattingDisplay}>
+                                    {console.log('Rendering messages:', messages)}
+                                    {messages.length === 0 && (
+                                        <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                                            No messages yet. Start the conversation!
+                                        </div>
+                                    )}
                                     {messages.map((msg, index) => (
                                         <div key={index} className={`${styles.messageItem} ${msg.isOwn ? styles.ownMessage : ''}`}>
                                             <div className={styles.messageAvatar}>
@@ -711,12 +833,12 @@ const sendMessage = async () => {
                                                 <div className={styles.messageBubble}>
                                                     {msg.translated || msg.original }
                                                 </div>
-                                                
+{/*                                                 
                                                 {msg.original && msg.translated && msg.original !== msg.translated && !msg.isOwn && (
-                                                    <div className={styles.originalText}>
-                                                        Original: {msg.original}
-                                                    </div>
-                                                )}
+                                                    // <div className={styles.originalText}>
+                                                    //     Original: {msg.original}
+                                                    // </div>
+                                                )} */}
                                             </div>
                                         </div>
                                     ))}

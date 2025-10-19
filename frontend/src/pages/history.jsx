@@ -67,52 +67,48 @@ export default function History() {
   return (
     <div
       className="history-container"
-      style={sidebarOpen ? { width: "460px" } : { width: "60px" }}
+      style={sidebarOpen ? { width: "400px" } : { width: "60px" }}
     >
-      <div className="history-header" style={{ marginBottom: "5px" }}>
-        <button
-          className="history-icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <i className="fa-solid fa-clock-rotate-left"></i>
-        </button>
-        {sidebarOpen && <h2 className="history-word">History</h2>}
-      </div>
+       <div className="history-header">
+    <button className="history-icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+      <i className="fa-solid fa-clock-rotate-left"></i>
+    </button>
+    {sidebarOpen && <h2 className="history-word">History</h2>}
+  </div>
 
-      {sidebarOpen ? (
-        <div className="history-scroll-container">
-          {meetings.length !== 0 ? meetings.slice().reverse().map((e, i) => (
-            <Card key={i} variant="outlined" style={{ padding: "20px 0px 0" }}>
-              <CardContent style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                    Code: {e.meetingCode}
-                  </Typography>
-                  <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                    Date: {formatDate(e.date)}
-                  </Typography>
-                </div>
-
-                <div>
-                  <Button variant='contained'>
-                    Summary
-                    <img src="/images/ai.png" alt="" style={{ width: "40px" }} />
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    startIcon={<Download />}
-                    onClick={() => handleDownload(e.meetingCode)}
-                    disabled={!notesStatus[e.meetingCode]} // Disable if no notes
-                  >
-                    Notes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )) : null}
-        </div>
-      ) : null}
+  {sidebarOpen && (
+    <div className="history-scroll-container">
+      {meetings.length !== 0 &&
+        meetings.slice().reverse().map((e, i) => (
+          <Card key={i} variant="outlined" style={{ padding: "20px 0px 0" }}>
+            <CardContent style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
+                  Code: {e.meetingCode}
+                </Typography>
+                <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                  Date: {formatDate(e.date)}
+                </Typography>
+              </div>
+              <div>
+                <Button variant="contained">
+                  Summary
+                  <img src="/images/ai.png" alt="" style={{ width: "40px" }} />
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={() => handleDownload(e.meetingCode)}
+                  disabled={!notesStatus[e.meetingCode]}
+                >
+                  Notes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+    </div>
+  )}
     </div>
   );
 }

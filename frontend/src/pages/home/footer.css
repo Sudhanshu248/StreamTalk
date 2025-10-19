@@ -1,0 +1,104 @@
+.footer {
+  background-color: #4338ca; /* Indigo-700 */
+  color: white;
+  padding: 3rem 1rem 2rem;
+  font-family: Arial, sans-serif;
+}
+
+.footerContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.footerBranding {
+  display: flex
+;
+    text-align: justify;
+    flex: 1 1 300px;
+    flex-direction: column
+}
+
+.footerBranding h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.footerNav {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px; /* space between icons */
+  padding: 16px 0;
+  background-color: transparent; /* or your footer background */
+}
+
+.iconLink {
+  color: white; /* gray-600 */
+  text-decoration: none;
+  transition: color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  font-size: 22px;
+}
+
+.iconLink:hover {
+  cursor: pointer;
+}
+
+.iconLink[aria-label*="LinkedIn"]:hover {
+  color: #1F2937; /* LinkedIn blue */
+}
+
+.iconLink[aria-label*="email"]:hover {
+  color: #1F2937; /* Gmail red */
+}
+
+.iconLink[aria-label*="GitHub"]:hover {
+  color: #1F2937; /* dark gray */
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+
+.footerBranding p {
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 350px;
+}
+
+.footerCopyright {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  opacity: 0.75;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .footerContainer {
+    display: flex
+;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+  }
+}
+
+@media (max-width: 510px) {
+  .footerBranding {
+    justify-content: center;
+    align-items: anchor-center;
+
+  }
+}

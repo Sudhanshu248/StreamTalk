@@ -1,0 +1,122 @@
+.featuresSection {
+  max-width: 1200px;
+  margin: 4rem auto 6rem;
+  padding: 0 0.8rem 0 1.2rem;
+}
+
+/* Existing styles */
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  margin-bottom: 4rem;
+  flex-wrap: wrap;
+}
+
+.feature.reverse {
+  flex-direction: row-reverse;
+}
+
+.featureImageContainer {
+  flex: 1 1 300px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.featureImage {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.featureText {
+  flex: 1 1 300px;
+  max-width: 510px;
+}
+
+.featureText h3 {
+  font-size: 1.75rem;
+  color: #1976d2;
+  margin-bottom: 1rem;
+}
+
+.featureText p {
+  font-size: 1.125rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* Animation initial hidden state */
+.feature.hidden .featureImageContainer {
+  opacity: 0;
+  transform: translateX(-50px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.feature.hidden.reverse .featureImageContainer {
+  transform: translateX(50px);
+}
+
+.feature.hidden .featureText {
+  opacity: 0;
+  transform: translateX(50px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.feature.hidden.reverse .featureText {
+  transform: translateX(-50px);
+}
+
+/* Animation visible state */
+.feature.visible .featureImageContainer,
+.feature.visible .featureText {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .feature {
+    flex-direction: column;
+    text-align: center;
+    gap: 0;
+  }
+
+  .featureImageContainer {
+    flex: 1 1 200px;
+  }
+
+  .feature.reverse {
+    flex-direction: column;
+  }
+
+  .featureImage {
+    max-width: 65%;
+    margin: 0 auto;
+  }
+
+  .featureText {
+    flex: 0 1 110px;
+    max-width: 100%;
+  }
+
+  .featureImageContainer {
+    max-width: 80%;
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .featureImage {
+    max-width: 82%;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 450px) {
+  .featureImage {
+    max-width: 98%;
+    margin: 0 auto;
+  }
+}

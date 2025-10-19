@@ -1,18 +1,17 @@
-.navBar{
+.navBar {
     display: flex;
     justify-content: space-between;
-    padding-inline: 2rem ;
-    padding-block: 1rem  ;
+    padding-inline: 2rem;
+    padding-block: 1rem;
     align-items: center;
     position: sticky;
     background-color: rgb(242, 245, 248);
-    /* border-bottom: 2px solid rgb(249, 250, 251) */
     border-bottom: 2px solid rgba(0, 0, 0, 0.02);
 }
 
-.username{
+.username {
     font-weight: 600;
-    margin: 0px 30px 0px 5px;
+    margin: 0 30px 0 5px;
     color: #665df5;
 }
 
@@ -21,8 +20,8 @@
     justify-content: space-between;
     padding: 0 50px;
     align-items: center;
-    margin-top: 50px;
-    width: 100%;
+    /* margin-top: 50px; */
+    width: 95%;
 }
 
 .logoutBtn{
@@ -32,10 +31,131 @@
     
 }
 
+.rightPanel{
+    max-width: 505px;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
 .logoutBtn:hover{
     /* border: 2px solid #665df5; */
     color: #665df5;
     text-shadow:1px 1px  1.2px #665df5 ;
     /* padding: 3px 6px; */
+}
 
+.hamburgerMenu {
+  display: none;
+  font-size: 28px;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 15px;
+}
+
+@media screen and (max-width: 1150px) {
+    .meetContainer{
+        flex-direction: column;
+        margin: 70px 0;
+        gap: 8rem;
+    }
+    .leftPanel{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .navBar {
+        padding-inline: 1.5rem;
+    }
+    /* Resize logo name */
+    .navHeader img:nth-child(2) {
+        width: 150px;
+    }
+    /* Adjust username margin */
+    .username {
+        margin: 0 15px 0 5px;
+    }
+
+}
+
+@media screen and (max-width: 760px) {
+    .leftPanel h1{
+        font-size: 34px !important;
+    }
+    .leftPanel p{
+        font-size: 14px !important;
+    }
+.username,
+  .userProfile,
+  .LogoutButton {
+    display: none;
+  }
+  /* Show hamburger menu */
+  .hamburgerMenu {
+    display: block;
+  }
+/* Dropdown menu styles */
+  .dropdownMenu {
+    position: absolute;
+    top: 60px; /* adjust based on navbar height */
+    right: 5rem;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    padding: 10px 15px;
+    z-index: 3000;
+    min-width: 140px;
+  }
+  .dropdownUsername {
+    font-weight: 600;
+    color: #665df5;
+    margin-bottom: 10px;
+  }
+    .dropdownLogoutBtn {
+        display: block  ;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #665df5;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    text-align: left;
+  }
+  .dropdownLogoutBtn:hover {
+    text-shadow: 1px 1px 1.2px #665df5;
+  }
+}
+
+@media screen and (max-width: 570px) {
+    .leftPanel h1{
+        font-size: 30px !important;
+    }
+    .leftPanel p{
+        font-size: 13px !important;
+    }
+    .meetContainer{
+        padding: 0;
+    }
+    .navBar {
+        gap: 5px;
+    }
+    /* Smaller icon logo */
+    .navHeader img:nth-child(1) {
+        width: 24px;
+    }
+    /* Smaller logo name */
+    .navHeader img:nth-child(2) {
+        width: 120px;
+    }
+    /* Hide username again for safety */
+    .username {
+        display: none;
+    }
+    /* Adjust logout button padding and font size */
+    .navBar button {
+        padding: 3px 8px;
+        font-size: 13px;
+    }
 }

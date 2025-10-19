@@ -23,10 +23,10 @@ const meetingSchema = new Schema({
         required: true
     },
 
-    messages: [{
-        sender: { type: String, required: true }, // user name or ID
-        message: { type: String, required: true },
-    }]
+    // messages: [{
+    //     sender: { type: String, required: true }, // user name or ID
+    //     message: { type: String, required: true },
+    // }]
 })
 
 const Meeting = mongoose.model("Meeting", meetingSchema);

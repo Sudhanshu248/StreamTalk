@@ -1,0 +1,293 @@
+/* Base styles */
+.landingPageContainer {
+    width: 100vw;
+    background-color: white;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+.landingPageContainer nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.02);
+    z-index: 100;
+}
+
+.navHeader {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.navHeader img:first-child {
+    width: 30px;
+    margin-right: 8px;
+}
+
+.navHeader img:last-child {
+    width: 200px;
+}
+
+.navlist {
+    display: flex;
+    gap: 1.8rem;
+}
+
+.navlist p {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.navlist p:hover {
+    color: #665df5;
+    text-shadow: 0.8px 0.8px 1.2px #665df5;
+}
+
+.landingMainContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 3.5rem;
+    height: calc(100vh - 80px);
+    flex-wrap: wrap;
+    max-width: 1200px; /* Limit max width for large screens */
+    margin: 0 auto; /* Center container */
+}
+
+.landingMainContainer > div {
+    flex: 1 1 400px; /* Allow flexible width with minimum */
+    min-width: 280px;
+}
+
+.landingMainContainer h1 {
+    font-weight: bolder;
+    font-size: 3rem;
+    color: #665df5;
+    text-shadow: 1.2px 1.2px 3.5px #665df5;
+}
+
+.landingMainContainer p {
+    color: rgba(0, 0, 0, 0.65);
+    margin-left: 7px;
+    max-width: 500px;
+}
+
+.getStartedBtn {
+    background-color: #665df5;
+    width: fit-content;
+    padding: 10px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.getStartedBtn:hover {
+    background-color: #5748c8;
+}
+
+.getStartedBtn a {
+    text-decoration: none;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.homeImage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.homeImage img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Tablets and small desktops */
+@media screen and (max-width: 1024px) {
+    .landingMainContainer {
+        flex-direction: column-reverse;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem 2rem;
+        height: auto;
+    }
+
+    .landingMainContainer > div {
+        min-width: auto;
+        flex: 1 1 300px;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        height: auto;
+        flex-direction: column;
+    }
+
+    .navlist {
+        gap: 1rem;
+    }
+
+    .landingMainContainer h1 {
+        font-size: 2.5rem;
+    }
+
+    .getStartedBtn a {
+        font-size: 1.4rem;
+    }
+
+    .landingMainContainer p {
+        margin-left: 0;
+        font-size: 1rem;
+        max-width: 90%;
+        margin-inline: auto;
+    }
+
+    .homeImage {
+        margin-top: 0;
+    }
+
+    .navHeader img:last-child {
+        width: 150px;
+    }
+}
+
+/* Mobile devices */
+@media screen and (max-width: 768px) {
+    /* Add hamburger menu styles here if implemented */
+
+    .navHeader img:first-child {
+        width: 25px !important;
+    }
+
+    .navHeader img:last-child {
+        width: 170px !important;
+    }
+
+    .landingMainContainer h1 {
+        font-size: 2.2rem;
+    }
+
+    .getStartedBtn a {
+        font-size: 1.3rem;
+    }
+
+    .landingMainContainer p {
+        font-size: 0.95rem;
+    }
+}
+
+/* Very small devices (e.g., small phones) */
+@media screen and (max-width: 480px) {
+    .landingMainContainer h1 {
+        font-size: 1.95rem;
+    }
+
+    .hamburger {
+        padding: 4px !important;
+        gap: 4px !important;
+    }
+
+    .landingMainContainer {
+        gap: 1rem; /* reduce gap between flex items */
+        padding: 1rem 0.5rem; /* optional: reduce horizontal padding */
+    }
+
+    .landingPageContainer nav {
+        padding: 14px 10px !important;
+    }
+
+    .getStartedBtn {
+        padding: 8px 18px;
+    }
+
+    .getStartedBtn a {
+        font-size: 1.2rem;
+    }
+
+    .landingMainContainer {
+        padding: 1.5rem 1rem;
+    }
+
+    .homeImage img {
+        width: 90%;
+    }
+}
+
+
+/* Hamburger icon - hidden on desktop */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    gap: 5px;
+    z-index: 300; /* above navlist */
+}
+
+.hamburger .bar {
+    width: 25px;
+    height: 3px;
+    background-color: #665df5;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Animate hamburger to X when open */
+.hamburger.open .bar:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger.open .bar:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.open .bar:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Show hamburger on mobile */
+@media screen and (max-width: 768px) {
+    .hamburger {
+        display: flex;
+        border: 2px solid #665df5;
+        padding: 5px;
+        border-radius: 17%;
+    }
+
+    .navlist {
+        display: none;
+        position: absolute;
+        top: 60px; /* adjust based on nav height */
+        right: 2rem;
+        background-color: rgb(242, 245, 248);
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 200;
+        min-width: 150px;
+    }
+
+    .navlist.open {
+        display: flex;
+    }
+
+    /* Optional: style navlist items for mobile */
+    .navlist p {
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0.5rem 0;
+        margin: 0;
+        color: #665df5;
+        user-select: none;
+    }
+
+    .navlist p:hover {
+        color: #5748c8;
+        text-shadow: none;
+    }
+}

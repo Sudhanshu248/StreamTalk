@@ -125,10 +125,15 @@ const saveMeetingNotes = async (meetingCode, notes) => {
   }
 };
 
+const getMessages = async (meetingCode) => {
+  const res = await axios.get(`/get_messages/${meetingCode}`);
+  return res.data; // This will be an array of messages
+};
+
 // Removed getMessages function - messages handled through socket events
 
     const data = {
-        userData, setUserData, handleRegister, handleLogin, addToUserHistory, getHistoryOfUser, getUsername, getMeetingNotes, saveMeetingNotes, saveMessage
+        userData, setUserData, handleRegister, handleLogin, addToUserHistory, getHistoryOfUser, getUsername, getMeetingNotes, saveMeetingNotes, saveMessage, getMessages
     }
 
     return(
