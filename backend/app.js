@@ -67,7 +67,7 @@ app.get('/file/:filename', (req, res) => {
 app.set("port", (process.env.PORT || 8080));
 
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['https://stream-talk-black.vercel.app'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));

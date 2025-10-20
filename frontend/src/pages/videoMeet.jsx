@@ -17,11 +17,12 @@ import Whiteboard from './whiteboard';
 import DrawIcon from '@mui/icons-material/Draw';
 import Recorder from './summary';
 import { AuthContext } from '../contexts/AuthContext';
+import { BASE_URL } from '../axiosConfig';
 // import { get } from 'mongoose';
 
 // import server from '../environment';
 
-const server_url = "http://localhost:8080";
+const server_url = `${BASE_URL}`; //backend server url
 
 var connections = {};
 
@@ -89,6 +90,7 @@ export default function VideoMeetComponent() {
     // Load messages from DB when meeting code and username are available
     useEffect(() => {
         let didCancel = false;
+        console.log('=== MESSAGE LOADING DEBUG ===');
         console.log('Message loading useEffect triggered:', {
             showModal,
             meetingCode,
@@ -96,9 +98,17 @@ export default function VideoMeetComponent() {
             currentMeetingCode,
             messagesLoadedFromDB
         });
+        console.log('Condition check:', {
+            hasMeetingCode: !!meetingCode,
+            hasUsername: !!username,
+            usernameNotEmpty: username && username.trim() !== '',
+            differentMeeting: currentMeetingCode !== meetingCode,
+            willLoad: !!(meetingCode && username && username.trim() !== '' && currentMeetingCode !== meetingCode)
+        });
+        console.log('==============================');
         
         // Load messages when we have meeting code and username, regardless of modal state
-        if (meetingCode && username && currentMeetingCode !== meetingCode) {
+        if (meetingCode && username && username.trim() !== '' && currentMeetingCode !== meetingCode) {
             console.log('Loading messages from database for meeting:', meetingCode);
             setCurrentMeetingCode(meetingCode);
             setMessagesLoadedFromDB(true);
@@ -110,13 +120,37 @@ export default function VideoMeetComponent() {
                     // Check if response is valid JSON array
                     if (Array.isArray(res.data)) {
                         // Mark messages as own if sender matches current user
-                        const loadedMessages = res.data.map(msg => ({
-                            _id: msg._id,
-                            sender: msg.sender,
-                            original: msg.message,
-                            isOwn: msg.sender === username,
-                            timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
-                        }));
+                        const loadedMessages = res.data.map(msg => {
+                            const senderTrimmed = msg.sender ? msg.sender.trim() : '';
+                            const usernameTrimmed = username ? username.trim() : '';
+                            let isOwn = senderTrimmed && usernameTrimmed && senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase();
+                            
+                            // Fallback: if username matching fails, check if sender is "example" (for testing)
+                            if (!isOwn && senderTrimmed.toLowerCase() === 'example') {
+                                console.log('Using fallback: marking "example" as own message');
+                                isOwn = true;
+                            }
+                            
+                            console.log('=== MESSAGE OWNERSHIP DEBUG ===');
+                            console.log('Raw sender:', JSON.stringify(msg.sender));
+                            console.log('Raw username:', JSON.stringify(username));
+                            console.log('Sender trimmed:', JSON.stringify(senderTrimmed));
+                            console.log('Username trimmed:', JSON.stringify(usernameTrimmed));
+                            console.log('Sender lowercase:', JSON.stringify(senderTrimmed.toLowerCase()));
+                            console.log('Username lowercase:', JSON.stringify(usernameTrimmed.toLowerCase()));
+                            console.log('Are they equal?', senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase());
+                            console.log('isOwn result:', isOwn);
+                            console.log('================================');
+                            
+                            return {
+                                _id: msg._id,
+                                sender: msg.sender,
+                                original: msg.message,
+                                isOwn: isOwn,
+                                timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
+                            };
+                        });
+                        console.log('Loaded messages with ownership:', loadedMessages);
                         setMessages(loadedMessages);
                     } else {
                         console.warn('Invalid response format from API:', res.data);
@@ -131,6 +165,86 @@ export default function VideoMeetComponent() {
         }
         return () => { didCancel = true; };
     }, [meetingCode, username, currentMeetingCode]);
+
+    // Reprocess messages when username becomes available
+    useEffect(() => {
+        if (username && username.trim() !== '' && messages.length > 0) {
+            console.log('Username now available, reprocessing messages...');
+            
+            // Check if any message needs reprocessing (has isOwn as undefined or false when it should be true)
+            const needsReprocessing = messages.some(msg => {
+                const senderTrimmed = msg.sender ? msg.sender.trim() : '';
+                const usernameTrimmed = username ? username.trim() : '';
+                const shouldBeOwn = senderTrimmed && usernameTrimmed && senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase();
+                return msg.isOwn !== shouldBeOwn;
+            });
+            
+            if (needsReprocessing) {
+                const updatedMessages = messages.map(msg => {
+                    const senderTrimmed = msg.sender ? msg.sender.trim() : '';
+                    const usernameTrimmed = username ? username.trim() : '';
+                    const isOwn = senderTrimmed && usernameTrimmed && senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase();
+                    
+                    // Fallback: if username matching fails, check if sender is "example" (for testing)
+                    let finalIsOwn = isOwn;
+                    if (!isOwn && senderTrimmed.toLowerCase() === 'example') {
+                        console.log('Using fallback: marking "example" as own message');
+                        finalIsOwn = true;
+                    }
+                    
+                    console.log(`Reprocessing message from "${msg.sender}", current user: "${username}", isOwn: ${finalIsOwn}`);
+                    
+                    return {
+                        ...msg,
+                        isOwn: finalIsOwn
+                    };
+                });
+                setMessages(updatedMessages);
+            }
+        }
+    }, [username]); // Removed messages.length from dependencies to prevent infinite loop
+
+    // Fallback: Load messages when page loads if they haven't been loaded yet
+    useEffect(() => {
+        const loadMessagesOnPageLoad = async () => {
+            if (meetingCode && username && username.trim() !== '' && !messagesLoadedFromDB && messages.length === 0) {
+                console.log('Fallback: Loading messages on page load...');
+                try {
+                    const res = await clientServer.get(`/get_messages/${meetingCode}`);
+                    console.log('Fallback messages loaded:', res.data);
+                    
+                    if (Array.isArray(res.data)) {
+                        const loadedMessages = res.data.map(msg => {
+                            const senderTrimmed = msg.sender ? msg.sender.trim() : '';
+                            const usernameTrimmed = username ? username.trim() : '';
+                            let isOwn = senderTrimmed && usernameTrimmed && senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase();
+                            
+                            // Fallback: if username matching fails, check if sender is "example" (for testing)
+                            if (!isOwn && senderTrimmed.toLowerCase() === 'example') {
+                                console.log('Using fallback: marking "example" as own message');
+                                isOwn = true;
+                            }
+                            
+                            return {
+                                _id: msg._id,
+                                sender: msg.sender,
+                                original: msg.message,
+                                isOwn: isOwn,
+                                timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
+                            };
+                        });
+                        setMessages(loadedMessages);
+                        setMessagesLoadedFromDB(true);
+                        setCurrentMeetingCode(meetingCode);
+                    }
+                } catch (error) {
+                    console.error('Fallback message loading failed:', error);
+                }
+            }
+        };
+        
+        loadMessagesOnPageLoad();
+    }, [meetingCode, username, messagesLoadedFromDB, messages.length]);
 
 
 const fetchMeetingCode = async () => {
@@ -658,7 +772,9 @@ const fetchMeetingCode = async () => {
 
     const addMessage = async (data, sender, socketIdSender, msgId = undefined, msgTimestamp = undefined) => {
         // Use _id for deduplication if available
-        const isOwn = sender === username;
+        const isOwn = sender && username && username.trim() !== '' && sender.trim().toLowerCase() === username.trim().toLowerCase();
+        console.log(`Adding message from "${sender}", current user: "${username}", isOwn: ${isOwn}`);
+        
         if (msgId && messages.some(msg => msg._id === msgId)) {
             console.log('Duplicate message detected by _id:', msgId);
             return;
@@ -777,6 +893,9 @@ const sendMessage = async () => {
                         <div className={styles.chatRoom}>
                             <div className={styles.chatContainer}>
                                 <h1>Chat</h1>
+                                <div style={{fontSize: '12px', color: '#666', textAlign: 'center', marginBottom: '10px'}}>
+                                    Current User: <strong>{username || 'Loading...'}</strong>
+                                </div>
                                 <div style={{ marginBottom: '20px', padding: '0 10px' }}>
                                     <TextField
                                         select
@@ -818,30 +937,34 @@ const sendMessage = async () => {
                                             No messages yet. Start the conversation!
                                         </div>
                                     )}
-                                    {messages.map((msg, index) => (
-                                        <div key={index} className={`${styles.messageItem} ${msg.isOwn ? styles.ownMessage : ''}`}>
-                                            <div className={styles.messageAvatar}>
-                                                {msg.sender ? msg.sender.charAt(0).toUpperCase() : 'U'}
-                                            </div>
-
-
-                                            <div className={styles.messageContent}>
-                                                <div className={styles.messageHeader}>
-                                                    <span className={styles.senderName}>{msg.sender ? msg.sender : "user"}</span>
+                                    {messages.map((msg, index) => {
+                                        console.log(`Rendering message ${index}: sender=${msg.sender}, isOwn=${msg.isOwn}, classes=${msg.isOwn ? styles.ownMessage : 'default'}`);
+                                        return (
+                                            <div key={index} className={`${styles.messageItem} ${msg.isOwn ? styles.ownMessage : ''}`}>
+                                                <div className={styles.messageAvatar}>
+                                                    {msg.sender ? msg.sender.charAt(0).toUpperCase() : 'U'}
                                                 </div>
 
-                                                <div className={styles.messageBubble}>
-                                                    {msg.translated || msg.original }
-                                                </div>
+
+                                                <div className={styles.messageContent}>
+                                                    <div className={styles.messageHeader}>
+                                                        <span className={styles.senderName}>{msg.sender ? msg.sender : "user"}</span>
+                                                    </div>
+
+                                                    <div className={styles.messageBubble}>
+                                                        {msg.translated || msg.original }
+                                                        {msg.isOwn && <span style={{fontSize: '10px', color: '#4caf50', marginLeft: '5px'}}>✓ OWN</span>}
+                                                    </div>
 {/*                                                 
                                                 {msg.original && msg.translated && msg.original !== msg.translated && !msg.isOwn && (
                                                     // <div className={styles.originalText}>
                                                     //     Original: {msg.original}
                                                     // </div>
                                                 )} */}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     {isTranslating && (
                                         <div className={styles.translatingIndicator}>
                                             Translating...

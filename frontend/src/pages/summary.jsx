@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { BASE_URL } from "../axiosConfig";
 
 export default function Recorder() {
   const [recording, setRecording] = useState(false);
@@ -21,7 +22,7 @@ export default function Recorder() {
       const formData = new FormData();
       formData.append("file", audioBlob, "meeting.webm");
 
-      const response = await fetch("http://localhost:8080/transcribe", {
+      const response = await fetch(`${BASE_URL}/transcribe`, {
         method: "POST",
         body: formData
       });
@@ -46,7 +47,7 @@ export default function Recorder() {
   const formData = new FormData();
   formData.append("file", audioBlob, "meeting.wav");
 
-  const res = await fetch("http://localhost:8080/transcribe", {
+  const res = await fetch(`${BASE_URL}/transcribe`, {
     method: "POST",
     body: formData,
   });
