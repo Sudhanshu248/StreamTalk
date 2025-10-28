@@ -45,14 +45,14 @@
 }
 
 .messageItem:not(.ownMessage) .messageBubble {
-    background: #f1f3f4;
-    color: #000;
+    background: #0084ff;
+    color: white;
     border-top-left-radius: 4px;
 }
 
 .messageItem.ownMessage .messageBubble {
-    background: #0084ff;
-    color: white;
+    background: #f1f3f4;
+    color: #000;
     border-top-right-radius: 4px;
 }
 

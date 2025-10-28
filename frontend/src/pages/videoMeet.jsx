@@ -8,7 +8,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff'
 import CallEndIcon from '@mui/icons-material/CallEnd'
 import videoStyles from "./videoMeet.module.css";
-import chatStyles from "./chat.module.css"; // or chat2.module.css if you use that
+import chatStyles from "./chat2.module.css";
 import MicIcon from '@mui/icons-material/Mic'
 import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
@@ -19,6 +19,8 @@ import DrawIcon from '@mui/icons-material/Draw';
 import Recorder from './summary';
 import { AuthContext } from '../contexts/AuthContext';
 import { BASE_URL } from '../axiosConfig';
+import layoutStyles from "./videoMeetLayout.module.css";
+
 // import { get } from 'mongoose';
 
 // import server from '../environment';
@@ -29,8 +31,15 @@ var connections = {};
 
 const peerConfigConnections = {
     "iceServers": [
-        { "urls": "stun:stun.l.google.com:19302" }
-    ]
+        { "urls": "stun:stun.l.google.com:19302" },
+        { "urls": "stun:stun1.l.google.com:19302" },
+        { "urls": "stun:stun2.l.google.com:19302" },
+        { "urls": "stun:stun3.l.google.com:19302" },
+        { "urls": "stun:stun4.l.google.com:19302" }
+    ],
+    "iceCandidatePoolSize": 10,
+    "bundlePolicy": "max-bundle",
+    "rtcpMuxPolicy": "require"
 }
 
 export default function VideoMeetComponent() {
@@ -43,9 +52,9 @@ export default function VideoMeetComponent() {
 
     let [videoAvailable, setVideoAvailable] = useState(true);
     let [audioAvailable, setAudioAvailable] = useState(true);
-    let [video, setVideo] = useState([]);
-    let [audio, setAudio] = useState();
-    let [screen, setScreen] = useState();
+    let [video, setVideo] = useState(true);
+    let [audio, setAudio] = useState(true);
+    let [screen, setScreen] = useState(false);
     let [showModal, setModal] = useState(false);
     let [showDashboard, setShowDashboard] = useState(false);
     let [screenAvailable, setScreenAvailable] = useState();
@@ -122,15 +131,8 @@ export default function VideoMeetComponent() {
                     if (Array.isArray(res.data)) {
                         // Mark messages as own if sender matches current user
                         const loadedMessages = res.data.map(msg => {
-                            const senderTrimmed = msg.sender ? msg.sender.trim() : '';
-                            const usernameTrimmed = username ? username.trim() : '';
-                            let isOwn = senderTrimmed && usernameTrimmed && senderTrimmed.toLowerCase() === usernameTrimmed.toLowerCase();
-                            
-                            // Fallback: if username matching fails, check if sender is "example" (for testing)
-                            if (!isOwn && senderTrimmed.toLowerCase() === 'example') {
-                                console.log('Using fallback: marking "example" as own message');
-                                isOwn = true;
-                            }
+                            // Simple direct comparison with current username
+                            const isOwn = msg.sender === username;
                             
                             console.log('=== MESSAGE OWNERSHIP DEBUG ===');
                             console.log('Raw sender:', JSON.stringify(msg.sender));
@@ -483,15 +485,47 @@ const fetchMeetingCode = async () => {
 
     let getUserMedia = () => {  //The getUserMedia function is designed to request a user's camera and/or microphone access
         if ((video && videoAvailable) || (audio && audioAvailable)) {
-            navigator.mediaDevices.getUserMedia({ video: video, audio: audio })   //If the condition is met, this WebRTC API call prompts the user for access to their camera and/or microphone
+            // Set constraints object with exact audio requirements
+            const constraints = {
+                video: video && videoAvailable ? true : false,
+                audio: audio && audioAvailable ? {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                } : false
+            };
+            
+            console.log('Getting user media with constraints:', constraints);
+            
+            navigator.mediaDevices.getUserMedia(constraints)
                 .then(getUserMediaSuccess)
-                .then((stream) => { })
-                .catch((e) => console.log(e))
+                .catch((e) => {
+                    console.error('Error getting user media:', e);
+                    // If there's an error with both video and audio, try audio only
+                    if (audio && audioAvailable) {
+                        console.log('Retrying with audio only...');
+                        navigator.mediaDevices.getUserMedia({ 
+                            video: false, 
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true
+                            }
+                        })
+                        .then(getUserMediaSuccess)
+                        .catch(e => console.error('Error getting audio only:', e));
+                    }
+                });
         } else {
             try {
-                let tracks = localVideoref.current.srcObject.getTracks()
-                tracks.forEach(track => track.stop())
-            } catch (e) { }
+                let tracks = localVideoref.current.srcObject.getTracks();
+                tracks.forEach(track => {
+                    track.stop();
+                    console.log(`Stopped track: ${track.kind}`);
+                });
+            } catch (e) {
+                console.error('Error stopping tracks:', e);
+            }
         }
     }
     
@@ -602,39 +636,53 @@ const fetchMeetingCode = async () => {
 
             socketRef.current.on('user-joined', (id, clients) => {
                 clients.forEach((socketListId) => {
+                    console.log('Setting up connection for client:', socketListId);
+                    
+                    connections[socketListId] = new RTCPeerConnection(peerConfigConnections);
+                    const peerConnection = connections[socketListId];
 
-                    connections[socketListId] = new RTCPeerConnection(peerConfigConnections)
-                    // Wait for their ice candidate       
-                    connections[socketListId].onicecandidate = function (event) {
-                        if (event.candidate != null) {
-                            socketRef.current.emit('signal', socketListId, JSON.stringify({ 'ice': event.candidate }))
+                    // Ice candidate handling
+                    peerConnection.onicecandidate = function (event) {
+                        if (event.candidate) {
+                            console.log('Sending ICE candidate to:', socketListId);
+                            socketRef.current.emit('signal', socketListId, JSON.stringify({ 'ice': event.candidate }));
                         }
-                    }
+                    };
 
-                    // Wait for their video stream
-                    connections[socketListId].onaddstream = (event) => {
-                        console.log("BEFORE:", videoRef.current);
-                        console.log("FINDING ID: ", socketListId);
+                    // Connection state monitoring
+                    peerConnection.onconnectionstatechange = function(event) {
+                        console.log('Connection state changed:', peerConnection.connectionState);
+                    };
+
+                    peerConnection.oniceconnectionstatechange = function(event) {
+                        console.log('ICE connection state:', peerConnection.iceConnectionState);
+                    };
+
+                    // Track handling
+                    peerConnection.ontrack = (event) => {
+                        console.log('Received tracks:', event.streams);
+                        const [remoteStream] = event.streams;
                         
+                        console.log('Processing remote stream for:', socketListId);
+                        console.log('Stream has tracks:', 
+                            remoteStream.getTracks().map(track => `${track.kind}: ${track.enabled}`));
+
                         let videoExists = videoRef.current.find(video => video.socketId === socketListId);
 
                         if (videoExists) {
-                            console.log("FOUND EXISTING");
-
-                            // Update the stream of the existing video
+                            console.log('Updating existing video for:', socketListId);
                             setVideos(videos => {
                                 const updatedVideos = videos.map(video =>
-                                    video.socketId === socketListId ? { ...video, stream: event.stream } : video
+                                    video.socketId === socketListId ? { ...video, stream: remoteStream } : video
                                 );
                                 videoRef.current = updatedVideos;
                                 return updatedVideos;
                             });
                         } else {
-                            // Create a new video
-                            console.log("CREATING NEW");
-                            let newVideo = {
+                            console.log('Creating new video for:', socketListId);
+                            const newVideo = {
                                 socketId: socketListId,
-                                stream: event.stream,
+                                stream: remoteStream,
                                 autoplay: true,
                                 playsinline: true
                             };
@@ -649,11 +697,18 @@ const fetchMeetingCode = async () => {
 
                     // Add the local video stream
                     if (window.localStream !== undefined && window.localStream !== null) {
-                        connections[socketListId].addStream(window.localStream)
+                        console.log('Adding local tracks to peer connection');
+                        try {
+                            window.localStream.getTracks().forEach(track => {
+                                console.log('Adding track to peer connection:', track.kind, track.enabled);
+                                peerConnection.addTrack(track, window.localStream);
+                            });
+                        } catch (e) {
+                            console.error('Error adding local tracks:', e);
+                        }
                     } else {
-                        let blackSilence = (...args) => new MediaStream([black(...args), silence()])
-                        window.localStream = blackSilence()
-                        connections[socketListId].addStream(window.localStream)
+                        console.warn('No local stream available');
+                        getUserMedia(); // Try to get user media again
                     }
                 })
 
@@ -718,26 +773,62 @@ const fetchMeetingCode = async () => {
     };
 
     //functions are used to toggle the on/off state of the user's microphone
-    const handleAudio = () => {
-        setAudio((prevAudio) => {
-            const newAudioState = !prevAudio;
-            try {
-                if (window.localStream) {
-                    const audioTracks = window.localStream.getAudioTracks();
-                    if (audioTracks.length > 0) {
-                        audioTracks[0].enabled = newAudioState;
-                        console.log('Audio track enabled:', newAudioState);
-                    } else {
-                        console.warn('No audio tracks found');
-                    }
-                } else {
-                    console.warn('No local stream available');
+    const handleAudio = async () => {
+        try {
+            // First check if we have permission to use audio
+            if (!audioAvailable) {
+                console.log('Requesting audio permission...');
+                try {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                    setAudioAvailable(true);
+                } catch (e) {
+                    console.error('Could not get audio permission:', e);
+                    return;
                 }
-            } catch (error) {
-                console.error('Error toggling audio:', error);
             }
-            return newAudioState;
-        });
+
+            setAudio((prevAudio) => {
+                const newAudioState = !prevAudio;
+                try {
+                    if (window.localStream) {
+                        const audioTracks = window.localStream.getAudioTracks();
+                        console.log('Audio tracks found:', audioTracks.length);
+                        
+                        if (audioTracks.length > 0) {
+                            audioTracks.forEach(track => {
+                                track.enabled = newAudioState;
+                                console.log(`Audio track "${track.label}" enabled:`, newAudioState);
+                            });
+                        } else {
+                            // If no audio tracks, try to add one
+                            console.log('No audio tracks found, requesting new audio track...');
+                            navigator.mediaDevices.getUserMedia({ audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true
+                            }})
+                            .then(stream => {
+                                const audioTrack = stream.getAudioTracks()[0];
+                                if (audioTrack) {
+                                    window.localStream.addTrack(audioTrack);
+                                    console.log('Added new audio track');
+                                }
+                            })
+                            .catch(e => console.error('Error adding audio track:', e));
+                        }
+                    } else {
+                        console.warn('No local stream available');
+                        // Try to create a new stream with audio
+                        getUserMedia();
+                    }
+                } catch (error) {
+                    console.error('Error toggling audio:', error);
+                }
+                return newAudioState;
+            });
+        } catch (error) {
+            console.error('Error in handleAudio:', error);
+        }
     };
 
     useEffect(() => {
@@ -773,7 +864,7 @@ const fetchMeetingCode = async () => {
 
     const addMessage = async (data, sender, socketIdSender, msgId = undefined, msgTimestamp = undefined) => {
         // Use _id for deduplication if available
-        const isOwn = sender && username && username.trim() !== '' && sender.trim().toLowerCase() === username.trim().toLowerCase();
+        const isOwn = sender === username; // Message is own if sender matches current user's username
         console.log(`Adding message from "${sender}", current user: "${username}", isOwn: ${isOwn}`);
         
         if (msgId && messages.some(msg => msg._id === msgId)) {
@@ -939,9 +1030,10 @@ const sendMessage = async () => {
                                         </div>
                                     )}
                                     {messages.map((msg, index) => {
-                                        console.log(`Rendering message ${index}: sender=${msg.sender}, isOwn=${msg.isOwn}`);
+                                        const isOwnMessage = msg.sender === username;
+                                        console.log(`Rendering message ${index}: sender=${msg.sender}, username=${username}, isOwn=${isOwnMessage}`);
                                         return (
-                                            <div key={index} className={`${chatStyles.messageItem} ${msg.isOwn ? chatStyles.ownMessage : ''}`}>
+                                            <div key={index} className={`${chatStyles.messageItem} ${isOwnMessage ? chatStyles.ownMessage : ''}`}>
                                                 <div className={chatStyles.messageContent}>
                                                     <div className={chatStyles.messageHeader}>
                                                         <span className={chatStyles.senderName}>{msg.sender || 'User'}</span>
@@ -1016,21 +1108,34 @@ const sendMessage = async () => {
                     </div>
                     
 
-                    <video className={videoStyles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
-
                     <div className={videoStyles.conferenceView}>
+                        {/* Show local video in conference view */}
+                        <div key="local-video">
+                            <video
+                                ref={localVideoref}
+                                autoPlay
+                                playsInline
+                                muted
+                            ></video>
+                        </div>
+                        {/* Show remote videos */}
                         {videos.map((video) => (
                             <div key={video.socketId}>
                                 <video
                                     data-socket={video.socketId}
                                     ref={ref => {
                                         if (ref && video.stream) {
+                                            console.log('Setting stream for video:', video.socketId);
                                             ref.srcObject = video.stream;
+                                            ref.onloadedmetadata = () => {
+                                                console.log('Video metadata loaded, attempting playback');
+                                                ref.play().catch(e => console.error('Error playing video:', e));
+                                            };
                                         }
                                     }}
                                     autoPlay
-                                >
-                                </video>
+                                    playsInline
+                                ></video>
                             </div>
                         ))}
                     </div>

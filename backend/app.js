@@ -12,7 +12,6 @@ import fetch from 'node-fetch';
 import multer from "multer";
 import { GridFsStorage } from 'multer-gridfs-storage';
 import Grid from 'gridfs-stream';
-import connectDB from './config/db.config.js';
 
 const app = express();
 dotenv.config();
@@ -73,10 +72,18 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Modify connectDB to initialize GridFS after connection
-const initializeDB = async () => {
-    await connectDB();
-    initGridFS();
+const connectDB = async () => {
+    try {
+        await mongoose.connect(dblink);
+        console.log("SuccessFully Mongo DB Connected !")
+        
+        // Initialize GridFS after successful connection
+        initGridFS();
+    }
+    catch (error) {
+        console.error("MongoDB connection error:", error);
+        process.exit(1);
+    }
 }
 
 app.use('/', userRoutes);
@@ -97,7 +104,7 @@ const start = async () => {
     server.listen(app.get("port"), () => {
         console.log("Server is successfully running on 8080 port.")
     })
-    initializeDB();
+    connectDB();
 }
 
 start();

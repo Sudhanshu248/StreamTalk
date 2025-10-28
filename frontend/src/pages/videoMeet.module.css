@@ -118,16 +118,26 @@
 }
 
 .conferenceView { 
+    position: fixed;
+    top: 10vh;
+    left: 0;
+    right: 0;
     display: flex;
+    flex-wrap: wrap;
     padding: 10px;
     gap: 10px;
+    justify-content: center;
+    align-items: flex-start;
+    height: 70vh;
+    overflow-y: auto;
 }
 
-.conferenceView  video {
-    width: 40vw;
-    height: 20vh;
-    min-width: 30vw;
+.conferenceView video {
+    width: 45%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
     border-radius: 10px;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 500px) {

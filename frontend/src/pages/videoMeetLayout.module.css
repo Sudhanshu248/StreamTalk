@@ -1,0 +1,48 @@
+.meetingContainer {
+  width: 100vw;
+  height: 100vh;
+  background: #f5f6fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.mainVideoArea {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+}
+.myVideo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.myVideo video {
+  width: 400px;
+  height: 225px;
+  border-radius: 16px;
+  background: #222;
+}
+.otherVideosRow {
+  display: flex;
+  gap: 16px;
+}
+.participantVideo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.participantVideo video {
+  width: 120px;
+  height: 80px;
+  border-radius: 12px;
+  background: #222;
+}
+.userLabel {
+  margin-top: 8px;
+  font-size: 1rem;
+  color: #333;
+  background: #fff;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
