@@ -7,7 +7,8 @@ import { Button } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff'
 import CallEndIcon from '@mui/icons-material/CallEnd'
-import styles from "./videoMeet.module.css";
+import videoStyles from "./videoMeet.module.css";
+import chatStyles from "./chat.module.css"; // or chat2.module.css if you use that
 import MicIcon from '@mui/icons-material/Mic'
 import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
@@ -876,12 +877,12 @@ const sendMessage = async () => {
                     {/* <video ref={localVideoref} autoPlay muted></video> */}
                 
 
-                <div className={styles.meetVideoContainer}>
+                <div className={videoStyles.meetVideoContainer}>
                            {/* <Recorder/>      */}
 
                      {showDashboard 
                             ? 
-                            <div className={styles.whiteboard}>
+                            <div className={videoStyles.whiteboard}>
                                 <Whiteboard/>
                             </div>
                             :
@@ -890,8 +891,8 @@ const sendMessage = async () => {
 
                     {showModal 
                         ? 
-                        <div className={styles.chatRoom}>
-                            <div className={styles.chatContainer}>
+                        <div className={videoStyles.chatRoom}>
+                            <div className={videoStyles.chatContainer}>
                                 <h1>Chat</h1>
                                 <div style={{fontSize: '12px', color: '#666', textAlign: 'center', marginBottom: '10px'}}>
                                     Current User: <strong>{username || 'Loading...'}</strong>
@@ -930,7 +931,7 @@ const sendMessage = async () => {
                                     </TextField>
                                 </div>
 
-                                <div className={styles.chattingDisplay}>
+                                <div className={videoStyles.chattingDisplay}>
                                     {console.log('Rendering messages:', messages)}
                                     {messages.length === 0 && (
                                         <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
@@ -938,41 +939,28 @@ const sendMessage = async () => {
                                         </div>
                                     )}
                                     {messages.map((msg, index) => {
-                                        console.log(`Rendering message ${index}: sender=${msg.sender}, isOwn=${msg.isOwn}, classes=${msg.isOwn ? styles.ownMessage : 'default'}`);
+                                        console.log(`Rendering message ${index}: sender=${msg.sender}, isOwn=${msg.isOwn}`);
                                         return (
-                                            <div key={index} className={`${styles.messageItem} ${msg.isOwn ? styles.ownMessage : ''}`}>
-                                                <div className={styles.messageAvatar}>
-                                                    {msg.sender ? msg.sender.charAt(0).toUpperCase() : 'U'}
-                                                </div>
-
-
-                                                <div className={styles.messageContent}>
-                                                    <div className={styles.messageHeader}>
-                                                        <span className={styles.senderName}>{msg.sender ? msg.sender : "user"}</span>
+                                            <div key={index} className={`${chatStyles.messageItem} ${msg.isOwn ? chatStyles.ownMessage : ''}`}>
+                                                <div className={chatStyles.messageContent}>
+                                                    <div className={chatStyles.messageHeader}>
+                                                        <span className={chatStyles.senderName}>{msg.sender || 'User'}</span>
                                                     </div>
-
-                                                    <div className={styles.messageBubble}>
-                                                        {msg.translated || msg.original }
-                                                        {msg.isOwn && <span style={{fontSize: '10px', color: '#4caf50', marginLeft: '5px'}}>✓ OWN</span>}
+                                                    <div className={chatStyles.messageBubble}>
+                                                        {msg.translated || msg.original}
                                                     </div>
-{/*                                                 
-                                                {msg.original && msg.translated && msg.original !== msg.translated && !msg.isOwn && (
-                                                    // <div className={styles.originalText}>
-                                                    //     Original: {msg.original}
-                                                    // </div>
-                                                )} */}
                                                 </div>
                                             </div>
                                         );
                                     })}
                                     {isTranslating && (
-                                        <div className={styles.translatingIndicator}>
+                                        <div className={videoStyles.translatingIndicator}>
                                             Translating...
                                         </div>
                                     )}
                                 </div>
 
-                                <div className={styles.chattingArea}>
+                                <div className={videoStyles.chattingArea}>
                                     <TextField 
                                         value={message} 
                                         onChange={(e) => setMessage(e.target.value)} 
@@ -992,7 +980,7 @@ const sendMessage = async () => {
 
              
 
-                    <div className={styles.buttonContainers}>
+                    <div className={videoStyles.buttonContainers}>
                         <IconButton onClick={handleVideo} style={{ color: "white" }}>
                             {(video === true) ? <VideocamIcon /> : <VideocamOffIcon />}
                         </IconButton>
@@ -1028,9 +1016,9 @@ const sendMessage = async () => {
                     </div>
                     
 
-                    <video className={styles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
+                    <video className={videoStyles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
 
-                    <div className={styles.conferenceView}>
+                    <div className={videoStyles.conferenceView}>
                         {videos.map((video) => (
                             <div key={video.socketId}>
                                 <video
@@ -1052,4 +1040,4 @@ const sendMessage = async () => {
         </div>
     )
 }
- 
+

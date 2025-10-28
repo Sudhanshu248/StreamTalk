@@ -262,7 +262,7 @@
     margin-bottom: 100px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    /* gap: 16px; */
     position: relative;
 }
 
@@ -271,7 +271,7 @@
     .chattingDisplay {
         padding: 12px 0;
         margin-bottom: 90px;
-        gap: 14px;
+        /* gap: 14px; */
     }
 }
 
@@ -289,7 +289,7 @@
     .chattingDisplay {
         padding: 25px 0;
         margin-bottom: 120px;
-        gap: 20px;
+        /* gap: 20px; */
     }
 }
 
@@ -297,7 +297,7 @@
     .chattingDisplay {
         padding: 10px 0;
         margin-bottom: 80px;
-        gap: 12px;
+        /* gap: 12px; */
     }
 }
 
@@ -325,26 +325,18 @@
     gap: 12px;
     max-width: 100%;
     position: relative;
+    margin: 8px 0;
+    padding: 0 15px;
 }
 
 .messageItem.ownMessage {
-justify-content: flex-end;
-    margin-right: 4%;
+    justify-content: flex-start;
+    /* padding-right: 25%; */
 }
 
 .messageItem:not(.ownMessage) {
     justify-content: flex-start;
-    margin-right: 20%;
-}
-
-@media (max-width: 500px) {
-    .messageItem.ownMessage {
-        margin-right: 2%;
-    }
-    
-    .messageItem:not(.ownMessage) {
-        margin-right: 5%;
-    }
+    padding-left: 25%;
 }
 
 .messageAvatar {
@@ -397,6 +389,7 @@ justify-content: flex-end;
     flex-direction: column;
     max-width: 60%;
     min-width: 0;
+    position: relative;
 }
 
 /* Tablet responsiveness for message content */
@@ -434,6 +427,11 @@ justify-content: flex-end;
 }
 
 .messageItem.ownMessage .messageHeader {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.messageItem:not(.ownMessage) .messageHeader {
     flex-direction: row-reverse;
     justify-content: flex-end;
 }
@@ -441,7 +439,7 @@ justify-content: flex-end;
 .senderName {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #333;
+    color: #007bff;
 }
 
 /* Tablet responsiveness for sender name */
@@ -471,15 +469,17 @@ justify-content: flex-end;
 
 .messageBubble {
     padding: 12px 16px;
-    border-radius: 18px;
+    /* border-radius: 18px; */
     background: #f1f3f4;
     color: #333;
     word-wrap: break-word;
-    line-height: 1.4;
+    /* line-height: 1.4; */
     position: relative;
+    max-width: 100%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Tablet responsiveness for message bubbles */
+/* Tablet responsiveness for message bubbles
 @media (min-width: 501px) and (max-width: 768px) {
     .messageBubble {
         padding: 14px 18px;
@@ -488,34 +488,36 @@ justify-content: flex-end;
     }
 }
 
-/* Small desktop responsiveness for message bubbles */
+/* Small desktop responsiveness for message bubbles 
 @media (min-width: 769px) and (max-width: 1024px) {
     .messageBubble {
         padding: 16px 20px;
         border-radius: 22px;
         line-height: 1.5;
     }
-}
+}*/
 
-/* Large desktop responsiveness for message bubbles */
+/* Large desktop responsiveness for message bubbles 
 @media (min-width: 1025px) {
     .messageBubble {
         padding: 18px 22px;
         border-radius: 24px;
         line-height: 1.6;
     }
-}
+} */
 
 .messageItem.ownMessage .messageBubble {
-    background: #e8f5e8;
+    background: #f1f3f4;
     color: #333;
-    border-bottom-right-radius: 4px;
+    border-top-left-radius: 4px;
+    margin-right: 8px;
 }
 
 .messageItem:not(.ownMessage) .messageBubble {
-    background: #f1f3f4;
-    color: #333;
-    border-bottom-left-radius: 4px;
+    background: #0084ff;
+    color: #ffffff;
+    border-top-right-radius: 4px;
+    margin-left: 8px;
 }
 
 .originalText {
@@ -530,7 +532,7 @@ justify-content: flex-end;
 }
 
 .messageItem.ownMessage .originalText {
-    background: rgba(76, 175, 80, 0.1);
+    /* background: rgba(76, 175, 80, 0.1); */
     border-left-color: #4caf50;
 }
 

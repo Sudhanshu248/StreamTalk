@@ -12,6 +12,7 @@ import fetch from 'node-fetch';
 import multer from "multer";
 import { GridFsStorage } from 'multer-gridfs-storage';
 import Grid from 'gridfs-stream';
+import connectDB from './config/db.config.js';
 
 const app = express();
 dotenv.config();
@@ -67,23 +68,15 @@ app.get('/file/:filename', (req, res) => {
 app.set("port", (process.env.PORT || 8080));
 
 app.use(cors({
-    origin: ['https://stream-talk-black.vercel.app'],
+    origin: ['http://localhost:5173'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const connectDB = async () => {
-    try {
-        await mongoose.connect(dblink);
-        console.log("SuccessFully Mongo DB Connected !")
-        
-        // Initialize GridFS after successful connection
-        initGridFS();
-    }
-    catch (error) {
-        console.error("MongoDB connection error:", error);
-        process.exit(1);
-    }
+// Modify connectDB to initialize GridFS after connection
+const initializeDB = async () => {
+    await connectDB();
+    initGridFS();
 }
 
 app.use('/', userRoutes);
@@ -104,7 +97,7 @@ const start = async () => {
     server.listen(app.get("port"), () => {
         console.log("Server is successfully running on 8080 port.")
     })
-    connectDB();
+    initializeDB();
 }
 
 start();

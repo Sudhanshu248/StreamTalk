@@ -1,5 +1,11 @@
 import mongoose, {Schema} from "mongoose";
 
+const messageSchema = new Schema({
+    sender: { type: String, required: true },
+    message: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+});
+
 const meetingSchema = new Schema({
     user_id: {
         type: String
@@ -23,10 +29,7 @@ const meetingSchema = new Schema({
         required: true
     },
 
-    // messages: [{
-    //     sender: { type: String, required: true }, // user name or ID
-    //     message: { type: String, required: true },
-    // }]
+    messages: [messageSchema]  // Array of messages for each meeting
 })
 
 const Meeting = mongoose.model("Meeting", meetingSchema);

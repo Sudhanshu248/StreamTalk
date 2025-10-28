@@ -1,40 +1,11 @@
 import { Server } from "socket.io";
 import fs from 'fs';
 import { Message } from '../models/message.models.js';
+import { Meeting } from '../models/meeting.models.js';
 import path from 'path';
 
 let connections = {}
-let messages = {} // REMOVE in-memory messages
 let timeOnline = {}
-
-// File path for storing messages
-const MESSAGES_FILE = path.join(process.cwd(), 'messages.json');
-
-// Load messages from file on startup
-const loadMessages = () => {
-    try {
-        if (fs.existsSync(MESSAGES_FILE)) {
-            const data = fs.readFileSync(MESSAGES_FILE, 'utf8');
-            messages = JSON.parse(data);
-            console.log('Messages loaded from file');
-        }
-    } catch (error) {
-        console.error('Error loading messages:', error);
-        messages = {};
-    }
-};
-
-// Save messages to file
-const saveMessages = () => {
-    try {
-        fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
-    } catch (error) {
-        console.error('Error saving messages:', error);
-    }
-};
-
-// Load messages when the module starts
-loadMessages();
 
 export const connectToSocket  = (server) => {
     const io = new Server(server, {
@@ -106,29 +77,65 @@ socket.on("join-call", (path) => {
 
         
 socket.on("chat-message", async (data, sender) => {
-    // Find the room the user is in
-    const [matchingRoom, found] = Object.entries(connections)
-        .reduce(([room, isFound], [roomKey, roomValue]) => {
-            if (!isFound && roomValue.includes(socket.id)) {
-                return [roomKey, true];
-            }
-            return [room, isFound];
-        }, ['', false]);
+    try {
+        // Find which room this socket is in
+        const [matchingRoom, found] = Object.entries(connections)
+            .reduce(([room, isFound], [roomKey, roomValue]) => {
+                if (!isFound && roomValue.includes(socket.id)) {
+                    return [roomKey, true];
+                }
+                return [room, isFound];
+            }, ['', false]);
 
-    if (found) {
-        // Save to MongoDB Message collection
-        const meetingCode = extractMeetingCodeFromPath(matchingRoom);
-        if (meetingCode) {
-            try {
-                const newMsg = new Message({ meetingCode, sender, message: data });
-                const savedMsg = await newMsg.save();
-                // Emit to all (including sender) with _id and timestamp
-                io.to(matchingRoom).emit("chat-message", data, sender, socket.id, savedMsg._id?.toString(), savedMsg.timestamp);
-                return;
-            } catch (e) {
-                console.error("Error saving chat message to Message collection:", e);
-            }
+        if (!found) {
+            console.error("Socket not found in any room");
+            return;
         }
+
+        const meetingCode = extractMeetingCodeFromPath(matchingRoom);
+        if (!meetingCode) {
+            console.error("Could not extract meeting code from path:", matchingRoom);
+            return;
+        }
+
+        // Find all meeting documents for this meetingCode
+        const allMeetings = await Meeting.find({ meetingCode });
+        const participantUserIds = allMeetings.map(m => m.user_id);
+
+        // If sender's meeting document does not exist, create it
+        if (!participantUserIds.includes(sender)) {
+            const newMeeting = new Meeting({
+                meetingCode,
+                user_id: sender,
+                messages: []
+            });
+            await newMeeting.save();
+            allMeetings.push(newMeeting);
+        }
+
+        // Add the new message to every participant's meeting document
+        for (const meeting of allMeetings) {
+            meeting.messages.push({
+                sender,
+                message: data,
+                timestamp: new Date()
+            });
+            await meeting.save();
+        }
+
+        // Emit to all users in the room
+        io.to(matchingRoom).emit(
+            "chat-message",
+            data,
+            sender,
+            socket.id,
+            undefined,
+            new Date()
+        );
+
+    } catch (error) {
+        console.error("Error handling chat message:", error);
+        socket.emit("chat-error", "Failed to save message");
     }
 });
 
