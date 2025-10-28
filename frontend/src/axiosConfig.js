@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Backend server
-export const BASE_URL = "http://localhost:8080";        
+export const BASE_URL = "https://streamtalk-q6dq.onrender.com";        
 
 // Create an Axios instance pre-configured with base settings
 const clientServer = axios.create({
