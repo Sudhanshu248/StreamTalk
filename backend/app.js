@@ -66,11 +66,14 @@ app.get('/file/:filename', (req, res) => {
 
 app.set("port", (process.env.PORT || 8080));
 
-app.use(cors({
-    origin: ['https://stream-talk-black.vercel.app'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// app.use(cors({
+//     origin: ['https://stream-talk-black.vercel.app'],
+//     credentials: true,
+//     allowedHeaders: ['Content-Type', 'Authorization']
+// }));
+
+// for testing 
+app.use(cors());
 
 const connectDB = async () => {
     try {
